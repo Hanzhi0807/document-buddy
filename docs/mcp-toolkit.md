@@ -5,7 +5,7 @@
 文档搭子的定位是：
 
 ```text
-飞书里的文档记忆结构
+飞书里的可见项目知识库
 +
 AI 可调用的 MCP 工具层
 +
@@ -42,7 +42,7 @@ python examples/run_offline_demo.py
 - Lark CLI / 本地 OpenAPI MCP：适合本地开发、调试和企业内网验证。
 - 飞书 Docs add-on：如果以后做插件 UI，也复用同一组文档搭子 MCP 工具。
 
-文档搭子只接收已经读取出的文本、来源标题和 `source_url`，然后维护 wiki、冲突和引用证据。
+文档搭子只接收已经读取出的文本、来源标题和 `source_url`，然后维护 wiki、冲突和引用证据。正式工作流里，AI 客户端还应把文档搭子整理出的 wiki 页面同步到飞书知识库或云文档，并用 `external_url` 把页面索引映射回飞书链接。
 
 ## 飞书优先工作流
 
@@ -52,10 +52,13 @@ python examples/run_offline_demo.py
 
 1. 用户或 AI 客户端通过飞书官方 MCP / Lark CLI 读取当前飞书文档、消息或文件内容。
 2. 调用 `ingest_text` 把内容整理进某个项目记忆，并把飞书链接作为 `source_url` 传入。
-3. 文档搭子维护本地或飞书文档形式的 wiki，默认生成 `index.md` 和 `log.md`。
-4. 如果 host LLM 需要做更细的整理，先调用 `get_wiki_maintenance_contract`，再用 `read_wiki_page` / `upsert_wiki_page` 做小范围页面更新。
-5. 用户提问时，AI 客户端必须先调用 `get_cited_context` 或 `query_project_wiki`。
-6. AI 只能基于工具返回的引用回答；没有引用就说 wiki 没有证据。
+3. 文档搭子维护项目 wiki，默认生成 `index.md` 和 `log.md`。
+4. AI 客户端调用 `get_feishu_wiki_sync_plan`，拿到要创建或更新到飞书的页面清单。
+5. AI 客户端用飞书官方 MCP / Lark CLI 把 wiki 页面同步到飞书知识库或云文档，作为团队可见层。
+6. 拿到飞书页面链接后，调用 `upsert_wiki_page`，用 `external_url` 记录页面映射。
+7. 如果 host LLM 需要做更细的整理，先调用 `get_wiki_maintenance_contract`，再用 `read_wiki_page` / `upsert_wiki_page` 做小范围页面更新。
+8. 用户提问时，AI 客户端必须先调用 `get_cited_context` 或 `query_project_wiki`。
+9. AI 只能基于工具返回的引用回答；没有引用就说 wiki 没有证据。
 
 后续如果做飞书 Docs add-on，插件 UI 也应该调用同一组工具。
 
@@ -76,7 +79,7 @@ python examples/run_offline_demo.py
     log.md
 ```
 
-在飞书正式形态里，这些页面可以映射到飞书文档或知识库页面。工具返回的引用链接应优先指向飞书文档链接；未映射飞书文档时使用 `wiki://...`。
+在飞书正式形态里，这些页面应映射到飞书文档或知识库页面。工具返回的引用链接应优先指向飞书文档链接；未映射飞书文档时才使用 `wiki://...`。
 
 ## MCP 工具
 
@@ -111,6 +114,10 @@ python examples/run_offline_demo.py
 ### read_wiki_page
 
 读取某个 wiki 页面。
+
+### get_feishu_wiki_sync_plan
+
+把当前 wiki 页面打包成飞书知识库/云文档的创建或更新清单。这个工具不直接调用飞书，只给 AI 客户端下一步写入飞书所需的页面标题、路径、Markdown 内容和当前映射链接。
 
 ### get_cited_context
 

@@ -119,6 +119,25 @@ class MCPServer:
                 lambda args: self.toolkit.read_wiki_page(args["workspace_id"], args["project"], args["page_key"]),
             ),
             ToolSpec(
+                "get_feishu_wiki_sync_plan",
+                "Return wiki pages as Feishu Docs/Knowledge Base create-or-update tasks.",
+                schema(
+                    {
+                        **common,
+                        "root_title": {
+                            "type": "string",
+                            "description": "Optional Feishu Docs/Knowledge Base root title.",
+                        },
+                    },
+                    ["workspace_id", "project"],
+                ),
+                lambda args: self.toolkit.get_feishu_wiki_sync_plan(
+                    args["workspace_id"],
+                    args["project"],
+                    args.get("root_title", "文档搭子知识库"),
+                ),
+            ),
+            ToolSpec(
                 "get_cited_context",
                 "Return citation-bearing wiki context for a question. This tool does not invent answers.",
                 schema({**common, "question": {"type": "string"}}, ["workspace_id", "project", "question"]),

@@ -9,7 +9,7 @@ AI 客户端
   ↓
 飞书官方 MCP / Lark CLI：读取飞书文档、知识库、群消息，返回文本和链接
   ↓
-文档搭子 MCP：ingest_text、维护 wiki、检测冲突、返回 citations
+文档搭子 MCP：ingest_text、维护 wiki、同步飞书可见层、检测冲突、返回 citations
   ↓
 AI 客户端：只根据 citations 回答用户
 ```
@@ -21,7 +21,7 @@ AI 客户端：只根据 citations 回答用户
 1. 确认文档搭子 MCP 能启动。
 2. 跑一遍离线演示，确认 wiki、引用、冲突检测都正常。
 3. 在 AI 客户端里准备两个 MCP 配置位：一个给飞书能力，一个给文档搭子。
-4. 晚上连飞书时，把真实飞书文档内容传给 `ingest_text`。
+4. 晚上连飞书时，把真实飞书文档内容传给 `ingest_text`，再用 `get_feishu_wiki_sync_plan` 把生成的 wiki 页面同步到飞书知识库或云文档。
 
 ## 本地离线演示
 
@@ -29,7 +29,7 @@ AI 客户端：只根据 citations 回答用户
 python examples/run_offline_demo.py
 ```
 
-这个脚本会读取 `examples/offline_feishu_sources/` 里的模拟飞书资料，写入一个临时项目 wiki，然后问三个问题：
+这个脚本会读取 `examples/offline_feishu_sources/` 里的模拟飞书资料，写入一个临时项目 wiki，打印飞书可见层同步清单，然后问三个问题：
 
 - 明天和 A 客户开会前要注意什么？
 - 客户需要什么？
@@ -86,7 +86,19 @@ python examples/run_offline_demo.py --data-dir .demo-data
 }
 ```
 
-3. 用户提问时，先调用 `query_project_wiki`：
+3. 调用 `get_feishu_wiki_sync_plan`，拿到准备写入飞书的页面清单：
+
+```json
+{
+  "workspace_id": "你的飞书 tenant / 团队 / 群标识",
+  "project": "A客户项目",
+  "root_title": "文档搭子知识库"
+}
+```
+
+4. AI 客户端用飞书官方 MCP / Lark CLI 创建或更新飞书知识库、云文档里的项目页面。
+5. 对已经同步到飞书的 wiki 页面，调用 `upsert_wiki_page` 时传入 `external_url`，让引用优先指向飞书页面。
+6. 用户提问时，先调用 `query_project_wiki`：
 
 ```json
 {
@@ -96,12 +108,14 @@ python examples/run_offline_demo.py --data-dir .demo-data
 }
 ```
 
-4. AI 客户端只根据返回的 `citations` 回答。
+7. AI 客户端只根据返回的 `citations` 回答。
 
 ## 接入成功的判断标准
 
 - `list_wiki_pages` 能看到 `index`、`overview`、`requirements`、`risks`、`commitments`、`sources`、`log` 等页面。
+- 飞书知识库或云文档里能看到同一套项目 wiki 页面。
 - `read_wiki_page` 能看到来源标题和飞书链接。
+- `get_feishu_wiki_sync_plan` 能返回要写入飞书的页面清单。
 - `query_project_wiki` 返回非空 `citations`。
 - 如果资料里出现预算、时间或承诺冲突，`list_review_items` 能看到待确认项。
 
@@ -113,7 +127,7 @@ python examples/run_offline_demo.py --data-dir .demo-data
 
 ### 飞书链接怎么进入引用？
 
-调用 `ingest_text` 时传 `source_url`。如果 wiki 页面本身已经同步到飞书文档，调用 `upsert_wiki_page` 时可以用 `external_url` 传飞书文档链接。
+调用 `ingest_text` 时传 `source_url`。如果 wiki 页面本身已经同步到飞书文档，调用 `upsert_wiki_page` 时可以用 `external_url` 传飞书文档链接。后续再次整理资料时，文档搭子会保留这个外部链接，让引用继续指向飞书。
 
 ### 需要服务端吗？
 

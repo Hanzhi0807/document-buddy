@@ -23,6 +23,18 @@ DEFAULT_PAGES = {
     "log": "# {project} 维护日志\n\n- 暂无记录。\n",
 }
 
+WIKI_PAGE_TITLES = {
+    "index": "项目首页",
+    "overview": "项目总览",
+    "requirements": "需求与关注点",
+    "risks": "风险点",
+    "commitments": "承诺与待办",
+    "decisions": "决策记录",
+    "people": "相关人物",
+    "open-questions": "待确认问题",
+    "sources": "资料清单",
+    "log": "维护日志",
+}
 
 WIKI_CONTRACT = {
     "goal": "Maintain a small project wiki from immutable source material; answer only from cited wiki evidence.",
@@ -155,6 +167,62 @@ class WorkMemoryToolkit:
             "page_key": page_key,
             "content": content,
             "found": bool(content),
+        }
+
+    def get_feishu_wiki_sync_plan(
+        self,
+        workspace_id: str,
+        project: str,
+        root_title: str = "文档搭子知识库",
+    ) -> dict[str, Any]:
+        """Return wiki pages as Feishu-visible page write tasks.
+
+        This does not call Feishu. A host AI should pass each page to the
+        official Feishu MCP, Lark CLI, or future Docs add-on, then call
+        upsert_wiki_page with the Feishu page URL as external_url.
+        """
+
+        project_id = slugify(project, "default")
+        pages = self.storage.list_wiki_pages(workspace_id, project_id)
+        page_rows = {
+            row["page_key"]: row["uri"] for row in self.db.list_pages(workspace_id, project_id)
+        }
+        ordered_keys = [key for key in DEFAULT_PAGES if key in pages]
+        ordered_keys.extend(sorted(key for key in pages if key not in DEFAULT_PAGES))
+        return {
+            "project_id": project_id,
+            "target": {
+                "type": "feishu_docs_or_wiki",
+                "root_title": root_title,
+                "project_title": project,
+            },
+            "instruction": (
+                "Create or update these pages in Feishu Docs/Knowledge Base. "
+                "After Feishu returns each page URL, call upsert_wiki_page with "
+                "the same page_key, markdown, and external_url."
+            ),
+            "pages": [
+                {
+                    "page_key": page_key,
+                    "title": WIKI_PAGE_TITLES.get(page_key, page_key),
+                    "suggested_path": [
+                        root_title,
+                        project,
+                        WIKI_PAGE_TITLES.get(page_key, page_key),
+                    ],
+                    "markdown": pages[page_key],
+                    "current_uri": page_rows.get(page_key, ""),
+                    "has_external_url": page_rows.get(page_key, "").startswith(
+                        ("http://", "https://")
+                    ),
+                    "action": "create_or_update",
+                }
+                for page_key in ordered_keys
+            ],
+            "after_sync": [
+                "Keep Feishu page URLs in external_url so future citations point to Feishu.",
+                "Keep WORK_MEMORY_DATA_DIR as cache, index, conflict state, and offline fallback.",
+            ],
         }
 
     def get_cited_context(self, workspace_id: str, project: str, question: str) -> dict[str, Any]:

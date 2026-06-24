@@ -62,6 +62,22 @@ def run_demo(data_dir: Path, keep_data: bool) -> int:
 
     _print_json("list_wiki_pages", toolkit.list_wiki_pages(workspace_id, project))
 
+    sync_plan = toolkit.get_feishu_wiki_sync_plan(workspace_id, project)
+    sync_preview = {
+        "project_id": sync_plan["project_id"],
+        "target": sync_plan["target"],
+        "pages": [
+            {
+                "page_key": page["page_key"],
+                "title": page["title"],
+                "suggested_path": page["suggested_path"],
+                "has_external_url": page["has_external_url"],
+            }
+            for page in sync_plan["pages"]
+        ],
+    }
+    _print_json("get_feishu_wiki_sync_plan", sync_preview)
+
     for question in ["明天和 A 客户开会前要注意什么？", "客户需要什么？"]:
         _print_json(
             f"query_project_wiki: {question}",

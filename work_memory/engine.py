@@ -136,10 +136,13 @@ class WorkMemoryEngine:
                 }
             )
         existing = self.storage.list_wiki_pages(workspace_id, project_id)
+        page_links = {row["page_key"]: row["uri"] for row in self.db.list_pages(workspace_id, project_id)}
         compiled = compile_project_memory(project_id, sources, existing)
         for page_key, content in compiled.pages.items():
             obj = self.storage.write_wiki_page(workspace_id, project_id, page_key, content)
-            self.db.upsert_page(workspace_id, project_id, page_key, page_key, obj.uri)
+            existing_uri = page_links.get(page_key, "")
+            uri = existing_uri if existing_uri.startswith(("http://", "https://")) else obj.uri
+            self.db.upsert_page(workspace_id, project_id, page_key, page_key, uri)
         self.db.upsert_conflicts(workspace_id, project_id, compiled.conflicts)
         self.db.add_event(
             workspace_id,

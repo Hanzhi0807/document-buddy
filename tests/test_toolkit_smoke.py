@@ -35,9 +35,50 @@ class ToolkitSmokeTest(unittest.TestCase):
             self.assertIn("来源：飞书会议纪要 L2", requirements["content"])
             self.assertIn("https://feishu.example/doc/meeting-1", requirements["content"])
 
+            sync_plan = toolkit.get_feishu_wiki_sync_plan("tenant-a", "A客户项目")
+            self.assertEqual("feishu_docs_or_wiki", sync_plan["target"]["type"])
+            self.assertEqual("文档搭子知识库", sync_plan["target"]["root_title"])
+            requirements_task = next(
+                page for page in sync_plan["pages"] if page["page_key"] == "requirements"
+            )
+            self.assertEqual(
+                ["文档搭子知识库", "A客户项目", "需求与关注点"],
+                requirements_task["suggested_path"],
+            )
+            self.assertIn("客户需要下周提供报价方案", requirements_task["markdown"])
+
+            toolkit.upsert_wiki_page(
+                "tenant-a",
+                "A客户项目",
+                "requirements",
+                requirements["content"],
+                external_url="https://feishu.example/wiki/a-client/requirements",
+            )
+            toolkit.ingest_text(
+                workspace_id="tenant-a",
+                project="A客户项目",
+                title="飞书跟进消息",
+                content="客户需要周五确认联系人。",
+                source_url="https://feishu.example/message/follow-up",
+            )
+            page_map = {
+                page["page_key"]: page
+                for page in toolkit.list_wiki_pages("tenant-a", "A客户项目")["pages"]
+            }
+            self.assertEqual(
+                "https://feishu.example/wiki/a-client/requirements",
+                page_map["requirements"]["uri"],
+            )
+
             answer = toolkit.query_project_wiki("tenant-a", "A客户项目", "客户需要什么？")
             self.assertTrue(answer["citations"])
             self.assertIn("requirements", answer["sources"])
+            self.assertTrue(
+                any(
+                    "https://feishu.example/wiki/a-client/requirements" in citation
+                    for citation in answer["citations"]
+                )
+            )
 
             conflicts = toolkit.detect_conflicts("tenant-a", "A客户项目")["conflicts"]
             self.assertEqual(1, len(conflicts))
