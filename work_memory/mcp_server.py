@@ -195,7 +195,7 @@ class MCPServer:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "document-buddy-mcp", "version": "0.1.0"},
+                    "serverInfo": {"name": "document-buddy-mcp", "version": "0.2.0"},
                 },
             }
         if method == "notifications/initialized":
@@ -217,8 +217,14 @@ class MCPServer:
             }
         if method == "tools/call":
             params = message.get("params") or {}
+            if not isinstance(params, dict):
+                return self._error(msg_id, -32602, "Invalid tools/call params")
             name = params.get("name")
+            if not isinstance(name, str):
+                return self._error(msg_id, -32602, "Tool name must be a string")
             arguments = params.get("arguments") or {}
+            if not isinstance(arguments, dict):
+                return self._error(msg_id, -32602, "Tool arguments must be an object")
             spec = self.tools.get(name)
             if spec is None:
                 return self._error(msg_id, -32601, f"Unknown tool: {name}")

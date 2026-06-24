@@ -108,6 +108,18 @@ AI 客户端基于带引用的 wiki 证据回答
 
 现在还没有连飞书，也可以先用模拟资料跑完整闭环。你只需要确认这件事：文档搭子能不能把“资料”变成“可引用的项目记忆”。
 
+### 30 秒快速验证
+
+如果你只是想先确认项目能跑，复制这三行：
+
+```bash
+pip install -e .
+python examples/run_offline_demo.py
+python -m work_memory.mcp_server
+```
+
+前两行会安装并跑离线飞书演示；第三行是 MCP stdio server 的启动命令。真实接入 AI 客户端时，把下面 MCP 配置里的 `command` / `args` 填进去即可。
+
 ### 第一步：跑离线演示
 
 在项目目录里运行：
@@ -292,7 +304,7 @@ AI 客户端：只根据引用回答用户
 - `query_project_wiki`：`get_cited_context` 的别名，回答问题前应调用它；内部会用轻量 BM25 从 wiki 页面和行里找证据。
 - `lint_project_wiki`：检查缺失页面、薄页面、未解决冲突。
 - `detect_conflicts`：列出未解决冲突。
-- `list_review_items`：列出需要用户或 AI 复核的轻量事项。
+- `list_review_items`：列出需要用户或 AI 复核的轻量事项，包括冲突、薄页面和本地来源读取失败。
 - `resolve_conflict`：用户确认后，将某个冲突标记为已解决。
 
 ## 启动 MCP
@@ -351,6 +363,7 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 - 离线演示样例：[examples/README.md](examples/README.md)
 - 飞书可见 Wiki 设计：[docs/feishu-visible-wiki.md](docs/feishu-visible-wiki.md)
 - Agent 交接文档：[docs/agent-handoff.md](docs/agent-handoff.md)
+- Changelog：[CHANGELOG.md](CHANGELOG.md)
 - Wiki 轻量规则：[docs/wiki-schema.md](docs/wiki-schema.md)
 - 平台能力使用原则：[docs/platform-capabilities.md](docs/platform-capabilities.md)
 
@@ -364,11 +377,13 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 - 自动维护 wiki 页面、`index.md` 和 `log.md`。
 - 来源链接和来源行号提示。
 - 冲突检测与轻量 review 列表。
+- 本地来源读取失败可见化。
 - 带引用上下文查询。
 - 中文友好的轻量 BM25 检索。
 - 飞书可见层同步清单。
 - 无引用不回答的规则。
 - 离线飞书接入演示。
+- GitHub Actions CI。
 
 不再包含：
 

@@ -1,10 +1,10 @@
 [project]
 name = "document-buddy"
-version = "0.1.0"
+version = "0.2.0"
 description = "文档搭子（Document Buddy）：无服务端的飞书优先 MCP 项目文档记忆工具包。"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Document Buddy Contributors" }]
 dependencies = []
 
@@ -14,9 +14,26 @@ parsers = [
   "pypdf>=4",
   "python-docx>=1.1",
 ]
+dev = [
+  "mypy>=1.10",
+]
 
 [project.scripts]
 document-buddy-mcp = "work_memory.mcp_server:main"
 
 [tool.ruff]
 line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+files = ["work_memory"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["work_memory*"]

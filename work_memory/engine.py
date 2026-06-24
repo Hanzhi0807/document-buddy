@@ -126,7 +126,22 @@ class WorkMemoryEngine:
             try:
                 with open(row["text_path"], encoding="utf-8") as source_file:
                     text = source_file.read()
-            except OSError:
+            except OSError as exc:
+                self.db.add_event(
+                    workspace_id,
+                    project_id,
+                    "source_text_read_failed",
+                    json.dumps(
+                        {
+                            "source_id": int(row["id"]),
+                            "title": row["title"],
+                            "uri": row["uri"],
+                            "text_path": row["text_path"],
+                            "error": str(exc),
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
                 text = ""
             sources.append(
                 {

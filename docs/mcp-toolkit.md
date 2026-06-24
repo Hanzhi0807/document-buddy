@@ -129,7 +129,7 @@ python examples/run_offline_demo.py
 
 ### lint_project_wiki
 
-检查缺失页面、薄页面和未解决冲突。
+检查缺失页面、薄页面、未解决冲突和本地来源读取失败。
 
 ### detect_conflicts
 
@@ -137,7 +137,7 @@ python examples/run_offline_demo.py
 
 ### list_review_items
 
-列出需要用户或 AI 复核的轻量事项，例如冲突和内容过薄的页面。
+列出需要用户或 AI 复核的轻量事项，例如冲突、内容过薄的页面，以及本地提取文本读不到的来源。
 
 ### resolve_conflict
 

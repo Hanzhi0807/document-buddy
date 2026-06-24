@@ -106,12 +106,67 @@ python -c "from work_memory.mcp_server import MCPServer; s=MCPServer(); print(le
 - `work_memory/retrieval.py`：无依赖 BM25 检索与中英文分词。
 - `examples/run_offline_demo.py`：离线飞书模拟演示。
 - `tests/test_toolkit_smoke.py`：核心 smoke test。
+- `tests/test_edge_cases.py`：工程成熟度边界测试，包括空资料、重复资料、无命中、Unicode/中英混合、大文本和来源读取失败。
 
 ## 本轮开始前最近提交
 
-- `47c26c4 Add lightweight BM25 wiki retrieval`
+- `453a373 Tune BM25 retrieval tests`
 
 ## 本轮交接记录
+
+### 2026-06-24：补工程成熟度安全网
+
+本轮目标：
+
+- 根据外部评价补工程成熟度，但继续保持文档搭子的轻工具边界，不引入 Docker、服务端、coverage 门槛或重型依赖。
+- 把 CI、可安装性、类型检查、边界测试、错误可见化和小白 Quickstart 补齐。
+
+本轮改动：
+
+- 新增 `.github/workflows/ci.yml`：push / pull request 时自动安装 `.[dev]`、跑单元测试、compileall、离线演示和 mypy。
+- 更新 `pyproject.toml`：版本升到 `0.2.0`，增加 `dev` 依赖、温和 mypy 配置、build-system，并把 setuptools 包发现限定到 `work_memory*`，避免根目录 `data/` 被误识别成包。
+- 新增 `CHANGELOG.md`：记录 `0.1.0` 和 `0.2.0` 的能力变化。
+- 更新 `README.md`：补 30 秒快速验证、Changelog 链接、CI 状态和“本地来源读取失败可见化”。
+- 更新 `work_memory/db.py`：新增 `list_events`，方便从事件表读取维护问题。
+- 更新 `work_memory/engine.py`：source 提取文本读不到时写入 `source_text_read_failed` 事件，不再静默吞掉。
+- 更新 `work_memory/toolkit.py`：`lint_project_wiki` 和 `list_review_items` 会暴露当前仍然读不到的来源；如果用户重新 ingest 后缓存恢复，旧错误不会继续显示。
+- 更新 `work_memory/mcp_server.py`：版本升到 `0.2.0`，并补 `tools/call` 参数类型校验，让 mypy 和协议错误更清楚。
+- 新增 `tests/test_edge_cases.py`：覆盖重复 ingest、空资料、无命中问题、Unicode/中英混合、大文本、来源读取失败、重新 ingest 清除读取失败提示。
+- 更新 `docs/mcp-toolkit.md`：说明 lint/review item 现在也包含本地来源读取失败。
+
+本轮验证：
+
+```bash
+python -m pip install -e ".[dev]"
+python -m unittest discover -s tests
+python -m mypy work_memory
+python -m compileall work_memory tests examples
+python examples\run_offline_demo.py
+git diff --check
+python -c "from work_memory.mcp_server import MCPServer; s=MCPServer(); print(len(s.tools)); print('get_feishu_wiki_sync_plan' in s.tools); print(s._handle({'jsonrpc':'2.0','id':1,'method':'initialize'})['result']['serverInfo']['version'])"
+python -c "import work_memory; from importlib.metadata import version; print(work_memory.__version__); print(version('document-buddy'))"
+```
+
+验证结果：
+
+- `python -m pip install -e ".[dev]"`：通过；中途发现并修复了 setuptools flat-layout 包发现问题。
+- `python -m unittest discover -s tests`：通过，18 个测试通过。
+- `python -m mypy work_memory`：通过，10 个 source files 无类型问题。
+- `python -m compileall work_memory tests examples`：通过。
+- `python examples\run_offline_demo.py`：通过，离线飞书演示仍能 ingest、生成飞书同步清单、返回 citations、列出 review items。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+- MCP server 工具数仍为 15，包含 `get_feishu_wiki_sync_plan`，server version 为 `0.2.0`。
+- 包版本和 `work_memory.__version__` 均为 `0.2.0`。
+
+下一位 agent 应该继续：
+
+- 晚上真实接入飞书后，优先验证飞书读取、wiki 写回、`external_url` 映射和 citations 跳转。
+- CI 配置已存在，push 后可以到 GitHub Actions 看首轮运行结果；如果 CI 失败，优先按 Actions 日志修。
+- 如果继续补工程成熟度，下一步可考虑最小化 release tag / GitHub Release；FTS5 或 embedding 仍不急，避免把工具变重。
+
+本轮提交：
+
+- 尚未提交；提交后最终回复里补最新 commit hash。
 
 ### 2026-06-24：调 BM25 短文本参数并补边界测试
 

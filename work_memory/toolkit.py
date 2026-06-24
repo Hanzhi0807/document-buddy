@@ -253,12 +253,14 @@ class WorkMemoryToolkit:
             if not meaningful:
                 thin_pages.append(page_key)
         conflicts = self.detect_conflicts(workspace_id, project)
+        source_read_errors = self._source_read_errors(workspace_id, project_id)
         return {
             "project_id": project_id,
-            "ok": not missing and not conflicts["conflicts"],
+            "ok": not missing and not conflicts["conflicts"] and not source_read_errors,
             "missing_pages": missing,
             "thin_pages": thin_pages,
             "open_conflicts": conflicts["conflicts"],
+            "source_read_errors": source_read_errors,
         }
 
     def detect_conflicts(self, workspace_id: str, project: str) -> dict[str, Any]:
@@ -291,6 +293,20 @@ class WorkMemoryToolkit:
                     "suggested_action": "Ask the user which version is correct, then call resolve_conflict.",
                 }
             )
+        for error in lint["source_read_errors"]:
+            title = error.get("title") or "未知资料"
+            items.append(
+                {
+                    "type": "source_read_error",
+                    "id": error.get("id"),
+                    "title": title,
+                    "description": f"资料「{title}」的本地提取文本读取失败：{error.get('error') or 'unknown error'}",
+                    "suggested_action": "Re-ingest the source material or restore the cached extracted text file.",
+                    "source_id": error.get("source_id"),
+                    "uri": error.get("uri"),
+                    "text_path": error.get("text_path"),
+                }
+            )
         for page_key in lint["thin_pages"]:
             items.append(
                 {
@@ -301,6 +317,37 @@ class WorkMemoryToolkit:
                 }
             )
         return {"project_id": lint["project_id"], "items": items}
+
+    def _source_read_errors(self, workspace_id: str, project_id: str) -> list[dict[str, Any]]:
+        rows = self.db.list_events(workspace_id, project_id, "source_text_read_failed", limit=20)
+        errors: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for row in rows:
+            try:
+                payload = json.loads(row["payload"])
+            except json.JSONDecodeError:
+                payload = {}
+            if not isinstance(payload, dict):
+                payload = {}
+            text_path = str(payload.get("text_path") or "")
+            if text_path and Path(text_path).exists():
+                continue
+            key = str(payload.get("source_id") or text_path or row["id"])
+            if key in seen:
+                continue
+            seen.add(key)
+            errors.append(
+                {
+                    "id": row["id"],
+                    "source_id": payload.get("source_id"),
+                    "title": payload.get("title", "未知资料"),
+                    "uri": payload.get("uri", ""),
+                    "text_path": text_path,
+                    "error": payload.get("error", ""),
+                    "created_at": row["created_at"],
+                }
+            )
+        return errors
 
     def resolve_conflict(
         self, workspace_id: str, project: str, conflict_id: int, resolution: str

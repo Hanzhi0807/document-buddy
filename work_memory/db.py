@@ -98,6 +98,36 @@ class Database:
                 (workspace_id, project_id, event_type, payload, utc_now()),
             )
 
+    def list_events(
+        self,
+        workspace_id: str,
+        project_id: str,
+        event_type: str | None = None,
+        limit: int = 50,
+    ) -> list[sqlite3.Row]:
+        with self.session() as conn:
+            if event_type is None:
+                rows = conn.execute(
+                    """
+                    SELECT * FROM events
+                    WHERE workspace_id = ? AND project_id = ?
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT ?
+                    """,
+                    (workspace_id, project_id, limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT * FROM events
+                    WHERE workspace_id = ? AND project_id = ? AND event_type = ?
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT ?
+                    """,
+                    (workspace_id, project_id, event_type, limit),
+                ).fetchall()
+        return rows
+
     def list_projects(self, workspace_id: str) -> list[str]:
         with self.session() as conn:
             rows = conn.execute(
