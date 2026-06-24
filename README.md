@@ -349,6 +349,7 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 - 飞书接入 Quickstart：[docs/feishu-quickstart.md](docs/feishu-quickstart.md)
 - 离线演示样例：[examples/README.md](examples/README.md)
 - 飞书可见 Wiki 设计：[docs/feishu-visible-wiki.md](docs/feishu-visible-wiki.md)
+- Agent 交接文档：[docs/agent-handoff.md](docs/agent-handoff.md)
 - Wiki 轻量规则：[docs/wiki-schema.md](docs/wiki-schema.md)
 - 平台能力使用原则：[docs/platform-capabilities.md](docs/platform-capabilities.md)
 
