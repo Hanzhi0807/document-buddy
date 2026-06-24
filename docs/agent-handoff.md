@@ -114,6 +114,43 @@ python -c "from work_memory.mcp_server import MCPServer; s=MCPServer(); print(le
 
 ## 本轮交接记录
 
+### 2026-06-24：修复 GitHub Actions mypy 失败
+
+本轮目标：
+
+- 用户指出 CI 只是推送了配置，还没有确认通过；实际查询 Actions 后发现最新 run 在 `Type check` 步骤失败。
+- 修复 Ubuntu CI 中 mypy 对可选 parser 依赖 `pypdf` / `docx` 的 missing import 报错。
+
+本轮改动：
+
+- 更新 `pyproject.toml`：增加 `[[tool.mypy.overrides]]`，只对可选模块 `docx` 和 `pypdf` 设置 `ignore_missing_imports = true`。
+- 这些 parser 仍保持 optional dependency，不加入核心安装路径，避免把 MCP 工具包变重。
+
+本轮验证：
+
+```bash
+python -m mypy work_memory
+python -m unittest discover -s tests
+python -m compileall work_memory tests examples
+git diff --check
+```
+
+验证结果：
+
+- `python -m mypy work_memory`：通过，10 个 source files 无类型问题。
+- `python -m unittest discover -s tests`：通过，18 个测试通过。
+- `python -m compileall work_memory tests examples`：通过。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+
+下一位 agent 应该继续：
+
+- 推送本修复后，必须再次检查 GitHub Actions 最新 CI run 是否 `success`。
+- 如果还有 CI 失败，优先拉对应失败 step 日志修，不要只相信本地验证。
+
+本轮提交：
+
+- 尚未提交；提交后最终回复里补最新 commit hash。
+
 ### 2026-06-24：补工程成熟度安全网
 
 本轮目标：
