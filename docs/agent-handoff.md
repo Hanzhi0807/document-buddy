@@ -149,7 +149,7 @@ git diff --check
 
 本轮提交：
 
-- 尚未提交；提交后最终回复里补最新 commit hash。
+- `374acaa Fix CI mypy optional imports`：CI mypy optional import 修复，已推送到 `main`；GitHub Actions run `28093427662` 结论为 `success`。
 
 ### 2026-06-24：补工程成熟度安全网
 
