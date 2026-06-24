@@ -39,11 +39,17 @@ def line_numbered(text: str) -> str:
 
 
 def money_mentions(text: str) -> list[str]:
-    pattern = r"(?:预算|报价|费用|金额|价格|合同|cost|budget)?[^。\n]{0,12}?(?:¥|￥)?\d+(?:\.\d+)?\s*(?:万|万元|元|k|K|w|W|million|m)?"
+    amount = r"(?:¥|￥)?\d+(?:\.\d+)?\s*(?:万元|万|元|k|K|w|W|million|m)"
+    pattern = rf"(?:预算|报价|费用|金额|价格|合同|cost|budget|按|为|约)?[^。\n，,；;]{{0,12}}?{amount}"
     hits = re.findall(pattern, text)
     cleaned: list[str] = []
+    seen_amounts: set[str] = set()
     for hit in hits:
         normalized = re.sub(r"\s+", "", hit)
-        if normalized and normalized not in cleaned:
+        normalized = normalized.strip("：:，,；;。")
+        amount_match = re.search(amount, normalized)
+        amount_key = amount_match.group(0) if amount_match else normalized
+        if normalized and amount_key not in seen_amounts:
             cleaned.append(normalized)
+            seen_amounts.add(amount_key)
     return cleaned[:20]

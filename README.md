@@ -92,6 +92,16 @@ MCP 客户端配置示例：
 }
 ```
 
+## 无飞书账号时先验证
+
+现在还没有连飞书，也可以先跑完整闭环：
+
+```bash
+python examples/run_offline_demo.py
+```
+
+这个演示会用模拟飞书资料调用 `ingest_text`，生成项目 wiki，查询带引用答案，并列出预算冲突。晚上接上飞书后，把模拟资料换成飞书官方 MCP / Lark CLI 读取到的真实标题、正文和链接即可。
+
 ## 飞书操作由谁完成
 
 文档搭子不直接操作飞书 API，也不自己保存飞书 token。飞书侧的读写交给飞书官方能力完成：
@@ -170,6 +180,8 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 ## 更多说明
 
 - MCP 工具包方案：[docs/mcp-toolkit.md](docs/mcp-toolkit.md)
+- 飞书接入 Quickstart：[docs/feishu-quickstart.md](docs/feishu-quickstart.md)
+- 离线演示样例：[examples/README.md](examples/README.md)
 - Wiki 轻量规则：[docs/wiki-schema.md](docs/wiki-schema.md)
 - 平台能力使用原则：[docs/platform-capabilities.md](docs/platform-capabilities.md)
 
@@ -185,6 +197,7 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 - 冲突检测与轻量 review 列表。
 - 带引用上下文查询。
 - 无引用不回答的规则。
+- 离线飞书接入演示。
 
 不再包含：
 

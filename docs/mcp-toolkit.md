@@ -24,6 +24,16 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 
 普通用户不需要在文档搭子里填 API key；企业管理员也不需要把 key 给这个工具包。
 
+## 本地离线验证
+
+不连飞书也可以先运行：
+
+```bash
+python examples/run_offline_demo.py
+```
+
+它使用 `examples/offline_feishu_sources/` 的模拟资料，验证 ingest、wiki、citations 和 review items。
+
 ## 飞书操作层
 
 文档搭子不直接封装飞书 OpenAPI。推荐把飞书操作交给更靠近平台的一层：

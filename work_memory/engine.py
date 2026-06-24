@@ -153,7 +153,7 @@ class WorkMemoryEngine:
         project_id = slugify(project, "default")
         pages = self.storage.list_wiki_pages(workspace_id, project_id)
         if not pages:
-            answer = "工作文档搭子还没有这个项目的 wiki 资料。先把会议纪要、文档、链接或聊天摘录发给我。"
+            answer = "文档搭子还没有这个项目的 wiki 资料。先把会议纪要、文档、链接或聊天摘录发给我。"
             return AnswerResult(project_id=project_id, answer=answer, sources=[], citations=[])
 
         page_links = {row["page_key"]: row["uri"] for row in self.db.list_pages(workspace_id, project_id)}
