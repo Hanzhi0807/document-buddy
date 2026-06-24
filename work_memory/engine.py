@@ -50,6 +50,7 @@ class WorkMemoryEngine:
         content: str,
         filename: str = "note.txt",
         source_type: str = "text",
+        source_uri: str = "",
     ) -> UploadResult:
         project_id = slugify(project, "default")
         data = content.encode("utf-8")
@@ -63,14 +64,14 @@ class WorkMemoryEngine:
             title=title or filename,
             source_type=source_type,
             source_hash=source_hash,
-            uri=raw.uri,
+            uri=source_uri or raw.uri,
             text_path=text_obj.uri,
         )
         self.db.add_event(
             workspace_id,
             project_id,
             "content_submitted",
-            json.dumps({"title": title, "uri": raw.uri}, ensure_ascii=False),
+            json.dumps({"title": title, "raw_uri": raw.uri, "source_uri": source_uri}, ensure_ascii=False),
         )
         maintain_message, conflicts = self.maintain_project(workspace_id, project_id)
         return UploadResult(
@@ -122,7 +123,8 @@ class WorkMemoryEngine:
         sources: list[dict[str, str]] = []
         for row in source_rows:
             try:
-                text = open(row["text_path"], encoding="utf-8").read()
+                with open(row["text_path"], encoding="utf-8") as source_file:
+                    text = source_file.read()
             except OSError:
                 text = ""
             sources.append(
@@ -296,6 +298,11 @@ class WorkMemoryEngine:
         for term in cjk_terms:
             if term not in terms:
                 terms.append(term)
+            for size in (2, 3):
+                for idx in range(0, max(len(term) - size + 1, 0)):
+                    chunk = term[idx : idx + size]
+                    if chunk not in terms:
+                        terms.append(chunk)
         return terms
 
     def _page_link(

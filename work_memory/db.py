@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable
+from typing import Iterator, Iterable
 
 from .utils import utc_now
 
@@ -74,12 +75,21 @@ class Database:
         conn.row_factory = sqlite3.Row
         return conn
 
+    @contextmanager
+    def session(self) -> Iterator[sqlite3.Connection]:
+        conn = self.connect()
+        try:
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
+
     def _init(self) -> None:
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.executescript(SCHEMA)
 
     def add_event(self, workspace_id: str, project_id: str, event_type: str, payload: str) -> None:
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO events(workspace_id, project_id, event_type, payload, created_at)
@@ -89,7 +99,7 @@ class Database:
             )
 
     def list_projects(self, workspace_id: str) -> list[str]:
-        with self.connect() as conn:
+        with self.session() as conn:
             rows = conn.execute(
                 """
                 SELECT DISTINCT project_id FROM sources WHERE workspace_id = ?
@@ -112,7 +122,7 @@ class Database:
         text_path: str,
     ) -> int:
         now = utc_now()
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT OR IGNORE INTO sources(
@@ -129,8 +139,8 @@ class Database:
         return int(row["id"])
 
     def list_sources(self, workspace_id: str, project_id: str) -> list[sqlite3.Row]:
-        with self.connect() as conn:
-            return conn.execute(
+        with self.session() as conn:
+            rows = conn.execute(
                 """
                 SELECT * FROM sources
                 WHERE workspace_id = ? AND project_id = ?
@@ -138,12 +148,13 @@ class Database:
                 """,
                 (workspace_id, project_id),
             ).fetchall()
+        return rows
 
     def upsert_page(
         self, workspace_id: str, project_id: str, page_key: str, title: str, uri: str
     ) -> None:
         now = utc_now()
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO wiki_pages(workspace_id, project_id, page_key, title, uri, updated_at)
@@ -155,8 +166,8 @@ class Database:
             )
 
     def list_pages(self, workspace_id: str, project_id: str) -> list[sqlite3.Row]:
-        with self.connect() as conn:
-            return conn.execute(
+        with self.session() as conn:
+            rows = conn.execute(
                 """
                 SELECT * FROM wiki_pages
                 WHERE workspace_id = ? AND project_id = ?
@@ -164,11 +175,12 @@ class Database:
                 """,
                 (workspace_id, project_id),
             ).fetchall()
+        return rows
 
     def add_conversation(
         self, workspace_id: str, project_id: str, question: str, answer: str
     ) -> None:
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO conversations(workspace_id, project_id, question, answer, created_at)
@@ -181,22 +193,30 @@ class Database:
         self, workspace_id: str, project_id: str, conflicts: Iterable[tuple[str, str]]
     ) -> None:
         now = utc_now()
-        with self.connect() as conn:
+        with self.session() as conn:
             for key, description in conflicts:
+                existing = conn.execute(
+                    """
+                    SELECT id FROM conflicts
+                    WHERE workspace_id = ? AND project_id = ? AND conflict_key = ?
+                    """,
+                    (workspace_id, project_id, key),
+                ).fetchone()
+                if existing:
+                    continue
                 conn.execute(
                     """
                     INSERT INTO conflicts(
                       workspace_id, project_id, conflict_key, description, status, created_at, updated_at
                     )
                     VALUES (?, ?, ?, ?, 'open', ?, ?)
-                    ON CONFLICT DO NOTHING
                     """,
                     (workspace_id, project_id, key, description, now, now),
                 )
 
     def open_conflicts(self, workspace_id: str, project_id: str) -> list[sqlite3.Row]:
-        with self.connect() as conn:
-            return conn.execute(
+        with self.session() as conn:
+            rows = conn.execute(
                 """
                 SELECT * FROM conflicts
                 WHERE workspace_id = ? AND project_id = ? AND status = 'open'
@@ -204,3 +224,20 @@ class Database:
                 """,
                 (workspace_id, project_id),
             ).fetchall()
+        return rows
+
+    def resolve_conflict(
+        self, workspace_id: str, project_id: str, conflict_id: int, resolution: str
+    ) -> bool:
+        now = utc_now()
+        with self.session() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE conflicts
+                SET status = 'resolved', description = description || ? , updated_at = ?
+                WHERE id = ? AND workspace_id = ? AND project_id = ? AND status = 'open'
+                """,
+                (f"\n处理结果：{resolution}", now, conflict_id, workspace_id, project_id),
+            )
+            rowcount = cursor.rowcount
+        return rowcount > 0

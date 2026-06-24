@@ -50,9 +50,15 @@ class MCPServer:
             ),
             ToolSpec(
                 "get_project_index",
-                "Return wiki page index and rules for a project memory.",
+                "Return wiki page index, schema, and rules for a project memory.",
                 schema(common, ["workspace_id", "project"]),
                 lambda args: self.toolkit.get_project_index(args["workspace_id"], args["project"]),
+            ),
+            ToolSpec(
+                "get_wiki_maintenance_contract",
+                "Return the lightweight wiki schema and maintenance rules for host LLMs.",
+                schema({}, []),
+                lambda args: self.toolkit.get_wiki_maintenance_contract(),
             ),
             ToolSpec(
                 "upsert_wiki_page",
@@ -135,6 +141,27 @@ class MCPServer:
                 "List unresolved conflicts detected during ingestion.",
                 schema(common, ["workspace_id", "project"]),
                 lambda args: self.toolkit.detect_conflicts(args["workspace_id"], args["project"]),
+            ),
+            ToolSpec(
+                "list_review_items",
+                "List lightweight review items such as conflicts and thin wiki pages.",
+                schema(common, ["workspace_id", "project"]),
+                lambda args: self.toolkit.list_review_items(args["workspace_id"], args["project"]),
+            ),
+            ToolSpec(
+                "resolve_conflict",
+                "Mark one conflict as resolved after the user confirms the correct version.",
+                schema(
+                    {
+                        **common,
+                        "conflict_id": {"type": "integer"},
+                        "resolution": {"type": "string"},
+                    },
+                    ["workspace_id", "project", "conflict_id", "resolution"],
+                ),
+                lambda args: self.toolkit.resolve_conflict(
+                    args["workspace_id"], args["project"], int(args["conflict_id"]), args["resolution"]
+                ),
             ),
         ]
         return {spec.name: spec for spec in specs}

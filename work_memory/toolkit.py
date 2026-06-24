@@ -11,13 +11,39 @@ from .utils import slugify
 
 
 DEFAULT_PAGES = {
+    "index": "# {project} Wiki Index\n\n暂无资料。\n",
     "overview": "# {project} 项目总览\n\n暂无资料。\n",
     "requirements": "# {project} 需求与关注点\n\n- 暂无资料。\n",
     "risks": "# {project} 风险点\n\n- 暂无资料。\n",
     "commitments": "# {project} 承诺与待办\n\n- 暂无资料。\n",
     "decisions": "# {project} 决策记录\n\n- 暂无资料。\n",
+    "people": "# {project} 相关人物\n\n- 暂无资料。\n",
     "open-questions": "# {project} 待确认问题\n\n- 暂无资料。\n",
     "sources": "# {project} 资料清单\n\n- 暂无资料。\n",
+    "log": "# {project} 维护日志\n\n- 暂无记录。\n",
+}
+
+
+WIKI_CONTRACT = {
+    "goal": "Maintain a small project wiki from immutable source material; answer only from cited wiki evidence.",
+    "pages": {
+        "index": "Entry point, page map, answer rules, project status.",
+        "overview": "Short current understanding of the project.",
+        "requirements": "Needs, goals, preferences, scope, acceptance hints.",
+        "risks": "Risks, blockers, unknowns, budget/legal/timeline concerns.",
+        "commitments": "Promised actions, owners, dates, follow-ups.",
+        "decisions": "Confirmed decisions and their source evidence.",
+        "people": "People, teams, customers, roles.",
+        "sources": "Source list with original links or local raw paths.",
+        "open-questions": "Conflicts and questions that need user confirmation.",
+        "log": "Small maintenance log, newest first.",
+    },
+    "rules": [
+        "Keep pages short and useful for office work.",
+        "Do not invent facts; preserve source title, source link, and line hint when available.",
+        "If two facts conflict, write the conflict to open-questions instead of choosing silently.",
+        "Use upsert_wiki_page for model-reviewed page patches; do not require a backend LLM key.",
+    ],
 }
 
 
@@ -51,7 +77,6 @@ class WorkMemoryToolkit:
     def list_project_memories(self, workspace_id: str) -> dict[str, Any]:
         return {"projects": self.engine.list_projects(workspace_id)}
 
-
     def get_project_index(self, workspace_id: str, project: str) -> dict[str, Any]:
         project_id = slugify(project, "default")
         pages = self.list_wiki_pages(workspace_id, project)["pages"]
@@ -61,7 +86,11 @@ class WorkMemoryToolkit:
             "pages": pages,
             "open_conflict_count": len(conflicts),
             "rule": "Answer questions only after calling get_cited_context or query_project_wiki.",
+            "schema": WIKI_CONTRACT,
         }
+
+    def get_wiki_maintenance_contract(self) -> dict[str, Any]:
+        return WIKI_CONTRACT
 
     def upsert_wiki_page(
         self,
@@ -82,6 +111,7 @@ class WorkMemoryToolkit:
             json.dumps({"page_key": page_key, "uri": uri}, ensure_ascii=False),
         )
         return {"project_id": project_id, "page_key": page_key, "uri": uri, "updated": True}
+
     def ingest_text(
         self,
         workspace_id: str,
@@ -91,8 +121,6 @@ class WorkMemoryToolkit:
         source_url: str = "",
     ) -> dict[str, Any]:
         title = title or "资料"
-        if source_url:
-            content = f"{content}\n\n来源链接：{source_url}"
         result = self.engine.upload_content(
             workspace_id=workspace_id,
             project=project,
@@ -100,6 +128,7 @@ class WorkMemoryToolkit:
             content=content,
             filename=f"{slugify(title, 'source')}.txt",
             source_type="mcp_text",
+            source_uri=source_url,
         )
         return {
             "project_id": result.project_id,
@@ -158,7 +187,7 @@ class WorkMemoryToolkit:
         conflicts = self.detect_conflicts(workspace_id, project)
         return {
             "project_id": project_id,
-            "ok": not missing,
+            "ok": not missing and not conflicts["conflicts"],
             "missing_pages": missing,
             "thin_pages": thin_pages,
             "open_conflicts": conflicts["conflicts"],
@@ -180,6 +209,44 @@ class WorkMemoryToolkit:
                 for row in rows
             ],
         }
+
+    def list_review_items(self, workspace_id: str, project: str) -> dict[str, Any]:
+        lint = self.lint_project_wiki(workspace_id, project)
+        items: list[dict[str, Any]] = []
+        for conflict in lint["open_conflicts"]:
+            items.append(
+                {
+                    "type": "conflict",
+                    "id": conflict["id"],
+                    "title": conflict["key"],
+                    "description": conflict["description"],
+                    "suggested_action": "Ask the user which version is correct, then call resolve_conflict.",
+                }
+            )
+        for page_key in lint["thin_pages"]:
+            items.append(
+                {
+                    "type": "thin_page",
+                    "page_key": page_key,
+                    "description": f"{page_key} 还缺少有用内容。",
+                    "suggested_action": "Add more source material or use upsert_wiki_page after reviewing evidence.",
+                }
+            )
+        return {"project_id": lint["project_id"], "items": items}
+
+    def resolve_conflict(
+        self, workspace_id: str, project: str, conflict_id: int, resolution: str
+    ) -> dict[str, Any]:
+        project_id = slugify(project, "default")
+        resolved = self.db.resolve_conflict(workspace_id, project_id, conflict_id, resolution)
+        if resolved:
+            self.db.add_event(
+                workspace_id,
+                project_id,
+                "conflict_resolved",
+                json.dumps({"conflict_id": conflict_id, "resolution": resolution}, ensure_ascii=False),
+            )
+        return {"project_id": project_id, "conflict_id": conflict_id, "resolved": resolved}
 
 
 def create_default_toolkit() -> WorkMemoryToolkit:

@@ -31,10 +31,11 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 推荐流程：
 
 1. 用户或 AI 客户端通过飞书官方 MCP / Lark CLI 读取当前飞书文档、消息或文件内容。
-2. 调用 `ingest_text` 把内容整理进某个项目记忆。
-3. 工作文档搭子维护本地或飞书文档形式的 wiki。
-4. 用户提问时，AI 客户端必须先调用 `get_cited_context` 或 `query_project_wiki`。
-5. AI 只能基于工具返回的引用回答；没有引用就说 wiki 没有证据。
+2. 调用 `ingest_text` 把内容整理进某个项目记忆，并把飞书链接作为 `source_url` 传入。
+3. 工作文档搭子维护本地或飞书文档形式的 wiki，默认生成 `index.md` 和 `log.md`。
+4. 如果 host LLM 需要做更细的整理，先调用 `get_wiki_maintenance_contract`，再用 `read_wiki_page` / `upsert_wiki_page` 做小范围页面更新。
+5. 用户提问时，AI 客户端必须先调用 `get_cited_context` 或 `query_project_wiki`。
+6. AI 只能基于工具返回的引用回答；没有引用就说 wiki 没有证据。
 
 后续如果做飞书 Docs add-on，插件 UI 也应该调用同一组工具。
 
@@ -43,13 +44,16 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 ```text
 工作文档搭子/
   A客户项目/
+    index.md
     overview.md
     requirements.md
     risks.md
     commitments.md
     decisions.md
+    people.md
     open-questions.md
     sources.md
+    log.md
 ```
 
 在飞书正式形态里，这些页面可以映射到飞书文档或知识库页面。工具返回的引用链接应优先指向飞书文档链接；未映射飞书文档时使用 `wiki://...`。
@@ -66,7 +70,11 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 
 ### get_project_index
 
-返回项目 wiki 页索引，并提醒模型：回答前必须调用引用上下文工具。
+返回项目 wiki 页索引、页面契约，并提醒模型：回答前必须调用引用上下文工具。
+
+### get_wiki_maintenance_contract
+
+返回轻量 wiki schema。MCP host 里的 LLM 可以据此维护页面，不需要本工具包保存模型 API key。
 
 ### ingest_text
 
@@ -100,6 +108,14 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 
 列出未解决冲突。
 
+### list_review_items
+
+列出需要用户或 AI 复核的轻量事项，例如冲突和内容过薄的页面。
+
+### resolve_conflict
+
+用户确认哪个版本正确后，把对应冲突标记为已解决。
+
 ## MCP 客户端配置示例
 
 ```json
@@ -121,4 +137,3 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 AI 客户端应该把下面这条规则写进 system/developer prompt：
 
 > 回答任何项目问题前，必须调用 `query_project_wiki`。只能使用工具返回的 citations 作答；没有 citations 时，直接说明 wiki 没有证据，不要补编。
-
