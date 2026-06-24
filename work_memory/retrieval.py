@@ -33,7 +33,7 @@ def rank_bm25(
     *,
     include_zero: bool = False,
     k1: float = 1.5,
-    b: float = 0.75,
+    b: float = 0.45,
 ) -> list[tuple[SearchDocument, float]]:
     query_terms = tokenize_search_text(query)
     if not query_terms or not documents:

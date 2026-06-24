@@ -121,6 +121,36 @@ class ToolkitSmokeTest(unittest.TestCase):
             self.assertIn("部署培训", bullet_lines[0])
             self.assertTrue(answer["citations"])
 
+    def test_query_empty_wiki_returns_no_citations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            toolkit = WorkMemoryToolkit(Path(tmp))
+
+            answer = toolkit.query_project_wiki("tenant-a", "空项目", "客户需要什么？")
+
+            self.assertEqual([], answer["citations"])
+            self.assertIn("还没有这个项目", answer["context"])
+
+    def test_query_single_page_wiki_returns_citation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            toolkit = WorkMemoryToolkit(Path(tmp))
+            toolkit.upsert_wiki_page(
+                workspace_id="tenant-a",
+                project="单页项目",
+                page_key="overview",
+                markdown="\n".join(
+                    [
+                        "# 单页项目 项目总览",
+                        "",
+                        "客户需要周五前收到报价方案。",
+                    ]
+                ),
+            )
+
+            answer = toolkit.query_project_wiki("tenant-a", "单页项目", "报价方案")
+
+            self.assertTrue(answer["citations"])
+            self.assertIn("报价方案", answer["context"])
+
 
 if __name__ == "__main__":
     unittest.main()

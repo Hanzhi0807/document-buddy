@@ -109,9 +109,34 @@ python -c "from work_memory.mcp_server import MCPServer; s=MCPServer(); print(le
 
 ## 本轮开始前最近提交
 
-- `5a29c1a Add agent handoff docs`
+- `47c26c4 Add lightweight BM25 wiki retrieval`
 
 ## 本轮交接记录
+
+### 2026-06-24：调 BM25 短文本参数并补边界测试
+
+本轮目标：
+
+- 根据外部评价继续收紧检索层：短 wiki 行不适合过强的长度惩罚，先把 BM25 默认 `b` 从 `0.75` 调到 `0.45`。
+- 不引入 FTS5、embedding 或外部服务，只补低风险参数和测试覆盖。
+
+本轮改动：
+
+- 更新 `work_memory/retrieval.py`：`rank_bm25` 默认 `b=0.45`，更适合单行 wiki evidence 的短文本排序。
+- 扩展 `tests/test_retrieval.py`：覆盖空输入、`include_zero`、单文档、中英混合 query、超长宽泛匹配不压过短而具体的证据行。
+- 扩展 `tests/test_toolkit_smoke.py`：覆盖空 wiki 无 citations、单页 wiki 仍能返回 citation。
+
+本轮验证：
+
+- `python -m unittest discover -s tests`：通过，11 个测试通过。
+- `python -m compileall work_memory tests examples`：通过。
+- `python examples\run_offline_demo.py`：通过，离线飞书演示仍能 ingest、生成飞书同步清单、返回 citations、列出 review items。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+
+下一位 agent 应该继续：
+
+- 晚上真实接入飞书后，优先做真实飞书文档读取、wiki 写回、`external_url` 映射和 citations 跳转验证。
+- 如果继续做检索性能，500+ 行以后可以考虑 SQLite FTS5；更深一层再评估本地 embedding，但仍要保持无服务端、不持有 API key。
 
 ### 2026-06-24：补轻量 BM25 检索
 
