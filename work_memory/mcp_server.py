@@ -176,7 +176,7 @@ class MCPServer:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "gongzuo-wendang-dazi-mcp", "version": "0.1.0"},
+                    "serverInfo": {"name": "document-buddy-mcp", "version": "0.1.0"},
                 },
             }
         if method == "notifications/initialized":

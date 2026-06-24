@@ -1,11 +1,11 @@
 [project]
-name = "gongzuo-wendang-dazi"
+name = "document-buddy"
 version = "0.1.0"
-description = "工作文档搭子：无服务端的飞书优先 MCP 项目文档记忆工具包。"
+description = "文档搭子（Document Buddy）：无服务端的飞书优先 MCP 项目文档记忆工具包。"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "工作文档搭子 Contributors" }]
+authors = [{ name = "Document Buddy Contributors" }]
 dependencies = []
 
 [project.optional-dependencies]
@@ -16,7 +16,7 @@ parsers = [
 ]
 
 [project.scripts]
-wendang-dazi-mcp = "work_memory.mcp_server:main"
+document-buddy-mcp = "work_memory.mcp_server:main"
 
 [tool.ruff]
 line-length = 100

@@ -1,6 +1,6 @@
-# 工作文档搭子（未完成，建设中）
+# 文档搭子（Document Buddy，未完成，建设中）
 
-工作文档搭子是一个基于 karpathy/llm-wiki.md 思路打造的 **无服务端 MCP 工具包**。
+文档搭子（Document Buddy）是一个基于 karpathy/llm-wiki.md 思路打造的 **无服务端 MCP 工具包**。
 
 它不做飞书机器人 SaaS，不接公网 webhook，也不托管任何 LLM API key。它停留在工具层：帮助用户或 AI 客户端把飞书文档、飞书知识库、群消息、会议纪要、PDF、网页资料整理成可追溯引用的项目 wiki。
 
@@ -16,12 +16,12 @@
         ↓
 飞书官方 MCP、Lark CLI、Docs add-on 或用户当前 AI 客户端读取内容
         ↓
-工作文档搭子 MCP 工具包维护项目 wiki
+文档搭子 MCP 工具包维护项目 wiki
         ↓
 AI 客户端基于带引用的 wiki 证据回答
 ```
 
-工作文档搭子本身不提供模型。用户使用的 LLM 来自自己的 AI 客户端或企业模型配置，比如 Codex、Claude Code、Cursor、Trae、OpenClaw、OpenAI、Azure OpenAI、DeepSeek、通义、火山或私有模型。
+文档搭子本身不提供模型。用户使用的 LLM 来自自己的 AI 客户端或企业模型配置，比如 Codex、Claude Code、Cursor、Trae、OpenClaw、OpenAI、Azure OpenAI、DeepSeek、通义、火山或私有模型。
 
 ## 普通用户怎么理解
 
@@ -73,7 +73,7 @@ python -m work_memory.mcp_server
 安装后也可以使用：
 
 ```bash
-wendang-dazi-mcp
+document-buddy-mcp
 ```
 
 MCP 客户端配置示例：
@@ -81,7 +81,7 @@ MCP 客户端配置示例：
 ```json
 {
   "mcpServers": {
-    "工作文档搭子": {
+    "文档搭子": {
       "command": "python",
       "args": ["-m", "work_memory.mcp_server"],
       "env": {
@@ -92,6 +92,28 @@ MCP 客户端配置示例：
 }
 ```
 
+## 飞书操作由谁完成
+
+文档搭子不直接操作飞书 API，也不自己保存飞书 token。飞书侧的读写交给飞书官方能力完成：
+
+- **飞书官方 MCP**：优先用于让 AI 客户端读取或写入飞书云文档、知识库等内容。
+- **Lark CLI / 本地 OpenAPI MCP**：更适合本地开发、调试或企业内部验证。
+- **未来 Docs add-on**：如果要做成更贴近飞书用户的插件，也应该调用同一组 MCP 工具。
+
+因此完整链路是：
+
+```text
+AI 客户端
+  ↓
+飞书官方 MCP / Lark CLI：读写飞书文档、消息、知识库，处理飞书权限和链接
+  ↓
+文档搭子 MCP：整理项目 wiki、检测冲突、返回带 citations 的证据
+  ↓
+AI 客户端：只根据引用回答用户
+```
+
+这样文档搭子不重复造飞书连接层，也不需要用户把 LLM API key 或飞书凭证交给它。
+
 ## 飞书优先方案
 
 第一阶段不做飞书机器人，也不做公网服务端。
@@ -100,7 +122,7 @@ MCP 客户端配置示例：
 
 1. 用飞书官方 MCP、Lark CLI 或 Docs add-on 读取飞书文档/知识库/消息内容。
 2. 把读取到的文本传给 `ingest_text`，同时传入飞书文档或消息链接作为 `source_url`。
-3. 工作文档搭子维护项目 wiki，并自动生成 `index.md` 和 `log.md`。
+3. 文档搭子维护项目 wiki，并自动生成 `index.md` 和 `log.md`。
 4. 如果 wiki 页面已经存在飞书文档中，用 `upsert_wiki_page` 的 `external_url` 传入飞书文档链接。
 5. 提问时调用 `query_project_wiki`，得到带引用上下文。
 6. AI 客户端只根据引用回答。
@@ -108,7 +130,7 @@ MCP 客户端配置示例：
 推荐 wiki 结构：
 
 ```text
-工作文档搭子/
+文档搭子/
   A客户项目/
     index.md
     overview.md

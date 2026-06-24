@@ -1,8 +1,8 @@
-# 工作文档搭子 MCP 工具包方案
+# 文档搭子（Document Buddy）MCP 工具包方案
 
 这个版本不假设有服务端，也不托管用户的 LLM API。
 
-工作文档搭子的定位是：
+文档搭子的定位是：
 
 ```text
 飞书里的文档记忆结构
@@ -22,7 +22,17 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 - 企业自己配置 OpenAI、Azure OpenAI、DeepSeek、通义、火山或私有模型。
 - 飞书官方 MCP / Lark CLI 负责读取飞书文档，本工具负责维护项目 wiki 和引用规则。
 
-普通用户不需要在工作文档搭子里填 API key；企业管理员也不需要把 key 给这个工具包。
+普通用户不需要在文档搭子里填 API key；企业管理员也不需要把 key 给这个工具包。
+
+## 飞书操作层
+
+文档搭子不直接封装飞书 OpenAPI。推荐把飞书操作交给更靠近平台的一层：
+
+- 飞书官方 MCP：优先用于云文档、知识库等正式接入。
+- Lark CLI / 本地 OpenAPI MCP：适合本地开发、调试和企业内网验证。
+- 飞书 Docs add-on：如果以后做插件 UI，也复用同一组文档搭子 MCP 工具。
+
+文档搭子只接收已经读取出的文本、来源标题和 `source_url`，然后维护 wiki、冲突和引用证据。
 
 ## 飞书优先工作流
 
@@ -32,7 +42,7 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 
 1. 用户或 AI 客户端通过飞书官方 MCP / Lark CLI 读取当前飞书文档、消息或文件内容。
 2. 调用 `ingest_text` 把内容整理进某个项目记忆，并把飞书链接作为 `source_url` 传入。
-3. 工作文档搭子维护本地或飞书文档形式的 wiki，默认生成 `index.md` 和 `log.md`。
+3. 文档搭子维护本地或飞书文档形式的 wiki，默认生成 `index.md` 和 `log.md`。
 4. 如果 host LLM 需要做更细的整理，先调用 `get_wiki_maintenance_contract`，再用 `read_wiki_page` / `upsert_wiki_page` 做小范围页面更新。
 5. 用户提问时，AI 客户端必须先调用 `get_cited_context` 或 `query_project_wiki`。
 6. AI 只能基于工具返回的引用回答；没有引用就说 wiki 没有证据。
@@ -42,7 +52,7 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 ## 推荐 wiki 结构
 
 ```text
-工作文档搭子/
+文档搭子/
   A客户项目/
     index.md
     overview.md
@@ -121,7 +131,7 @@ MCP 工具包不提供模型。用户在哪个 AI 客户端里使用，就由那
 ```json
 {
   "mcpServers": {
-    "工作文档搭子": {
+    "文档搭子": {
       "command": "python",
       "args": ["-m", "work_memory.mcp_server"],
       "env": {
