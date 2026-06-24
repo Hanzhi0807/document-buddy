@@ -1,11 +1,11 @@
 [project]
-name = "work-memory"
+name = "gongzuo-wendang-dazi"
 version = "0.1.0"
-description = "A platform-first work memory assistant for office teams."
+description = "工作文档搭子：一个优先接入飞书等办公平台的项目文档记忆助手。"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Work Memory Contributors" }]
+authors = [{ name = "工作文档搭子 Contributors" }]
 dependencies = []
 
 [project.optional-dependencies]
@@ -16,7 +16,7 @@ parsers = [
 ]
 
 [project.scripts]
-work-memory = "work_memory.server:main"
+wendang-dazi = "work_memory.server:main"
 
 [tool.ruff]
 line-length = 100
