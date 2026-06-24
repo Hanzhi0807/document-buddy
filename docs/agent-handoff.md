@@ -166,7 +166,7 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 
 本轮提交：
 
-- 尚未提交；提交后最终回复里补最新 commit hash。
+- `5953984 Improve engineering maturity checks`：工程成熟度功能提交，已推送到 `main`。
 
 ### 2026-06-24：调 BM25 短文本参数并补边界测试
 
