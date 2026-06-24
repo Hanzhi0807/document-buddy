@@ -101,15 +101,87 @@ AI 客户端基于带引用的 wiki 证据回答
 - 没有 `citations`，就必须说 wiki 没有证据，不能补编。
 - 发现冲突时，冲突写入 `open-questions`，由用户确认。
 
-## 无飞书账号时先验证
+## 小白上手：先跑通一遍
 
-现在还没有连飞书，也可以先跑完整闭环：
+现在还没有连飞书，也可以先用模拟资料跑完整闭环。你只需要确认这件事：文档搭子能不能把“资料”变成“可引用的项目记忆”。
+
+### 第一步：跑离线演示
+
+在项目目录里运行：
 
 ```bash
 python examples/run_offline_demo.py
 ```
 
-这个演示会用模拟飞书资料调用 `ingest_text`，生成项目 wiki，查询带引用答案，并列出预算冲突。晚上接上飞书后，把模拟资料换成飞书官方 MCP / Lark CLI 读取到的真实标题、正文和链接即可。
+这个演示会模拟三份飞书资料：会议纪要、需求文档、群消息摘录。跑完以后，你会看到：
+
+- `ingest_text`：资料被整理进 A 客户项目。
+- `list_wiki_pages`：项目 wiki 被创建出来。
+- `query_project_wiki`：问题能返回带引用的答案。
+- `list_review_items`：预算冲突会被列成待确认事项。
+
+如果想把生成出来的 wiki 留下来查看：
+
+```bash
+python examples/run_offline_demo.py --data-dir .demo-data
+```
+
+生成内容会在 `.demo-data/demo-tenant/a客户项目/wiki/`。
+
+### 第二步：把文档搭子接进 AI 客户端
+
+在支持 MCP 的 AI 客户端里，先加上文档搭子这一段配置：
+
+```json
+{
+  "mcpServers": {
+    "文档搭子": {
+      "command": "python",
+      "args": ["-m", "work_memory.mcp_server"],
+      "env": {
+        "WORK_MEMORY_DATA_DIR": "/path/to/document-buddy-data"
+      }
+    }
+  }
+}
+```
+
+这里的 `WORK_MEMORY_DATA_DIR` 是文档搭子保存项目 wiki 的地方。它可以先放在本地目录，等正式接飞书后再决定是否映射到飞书文档或知识库。
+
+### 第三步：晚上连飞书时替换真实资料
+
+飞书官方 MCP / Lark CLI 负责读取飞书内容。文档搭子只需要收到三样东西：
+
+- 文档标题。
+- 文档正文。
+- 原始飞书链接。
+
+AI 客户端拿到这些以后，调用 `ingest_text`，参数大概长这样：
+
+```json
+{
+  "workspace_id": "你的飞书 tenant / 团队 / 群标识",
+  "project": "A客户项目",
+  "title": "飞书会议纪要标题",
+  "content": "飞书工具读取到的正文",
+  "source_url": "飞书文档或消息链接"
+}
+```
+
+之后你就可以问：
+
+> 明天和 A 客户开会前我该注意什么？
+
+AI 客户端应该先调用 `query_project_wiki`，拿到 citations 后再回答。你看到引用链接，就说明最小链路跑通了。
+
+### 成功的标志
+
+- 能看到 `index`、`overview`、`requirements`、`risks`、`commitments`、`sources`、`log` 等 wiki 页面。
+- wiki 页面里能看到来源标题和飞书链接。
+- 提问时 `citations` 不是空的。
+- 如果资料里有预算、时间、承诺冲突，`list_review_items` 能看到待确认项。
+
+如果没有 citations，不要让 AI 自己补答案。先补充资料，或者检查相关 wiki 页面里是否真的没有证据。
 
 ## 飞书操作由谁完成
 
