@@ -1,0 +1,22 @@
+[project]
+name = "work-memory"
+version = "0.1.0"
+description = "A platform-first work memory assistant for office teams."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Work Memory Contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+parsers = [
+  "beautifulsoup4>=4.12",
+  "pypdf>=4",
+  "python-docx>=1.1",
+]
+
+[project.scripts]
+work-memory = "work_memory.server:main"
+
+[tool.ruff]
+line-length = 100
