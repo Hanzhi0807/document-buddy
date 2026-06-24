@@ -9,6 +9,7 @@ from urllib.parse import quote
 from .compiler import compile_project_memory
 from .db import Database
 from .extractors import extract_text
+from .retrieval import SearchDocument, rank_bm25
 from .storage import StorageProvider
 from .utils import compact_text, sha256_bytes, slugify
 
@@ -185,14 +186,17 @@ class WorkMemoryEngine:
     def read_wiki_page(self, workspace_id: str, project: str, page_key: str) -> str:
         return self.storage.read_wiki_page(workspace_id, slugify(project, "default"), page_key)
 
-    def _rank_pages(self, question: str, pages: dict[str, str]) -> list[tuple[str, int, str]]:
+    def _rank_pages(self, question: str, pages: dict[str, str]) -> list[tuple[str, float, str]]:
         terms = self._question_terms(question)
-        ranked: list[tuple[str, int, str]] = []
+        documents = [SearchDocument(doc_id=key, text=text) for key, text in pages.items()]
+        bm25_scores = {document.doc_id: score for document, score in rank_bm25(question, documents)}
+        ranked: list[tuple[str, float, str]] = []
         for key, text in pages.items():
             lowered = text.lower()
-            score = sum(lowered.count(term.lower()) for term in terms)
+            lexical_score = sum(lowered.count(term.lower()) for term in terms)
+            score = bm25_scores.get(key, 0.0) + min(lexical_score, 12) * 0.08
             if key in question.lower():
-                score += 5
+                score += 2.0
             ranked.append((key, score, text))
         ranked.sort(key=lambda item: item[1], reverse=True)
         return ranked
@@ -202,47 +206,90 @@ class WorkMemoryEngine:
         workspace_id: str,
         project_id: str,
         question: str,
-        ranked: list[tuple[str, int, str]],
+        ranked: list[tuple[str, float, str]],
         page_links: dict[str, str],
     ) -> list[Evidence]:
         preferred_pages = self._preferred_pages(question)
         ranked_by_key = {page_key: (score, text) for page_key, score, text in ranked}
-        ordered: list[tuple[str, int, str]] = []
+        ordered: list[tuple[str, float, str]] = []
         for page_key in preferred_pages:
             if page_key in ranked_by_key:
                 score, text = ranked_by_key[page_key]
-                ordered.append((page_key, score + 10, text))
+                ordered.append((page_key, score + 1.5, text))
         for page_key, score, text in ranked:
             if page_key not in preferred_pages:
                 ordered.append((page_key, score, text))
 
-        terms = self._question_terms(question)
-        evidence: list[Evidence] = []
-        for page_key, score, text in ordered:
-            allow_general = page_key in preferred_pages or score > 0
-            if not allow_general:
-                continue
+        line_documents: list[SearchDocument] = []
+        order = 0
+        for page_key, page_score, text in ordered:
             for line_no, raw_line in enumerate(text.splitlines(), start=1):
                 clean = self._clean_wiki_line(raw_line)
                 if not clean:
                     continue
-                if page_key not in preferred_pages and terms:
-                    lowered = clean.lower()
-                    if not any(term.lower() in lowered for term in terms):
-                        continue
-                evidence.append(
-                    Evidence(
-                        page_key=page_key,
-                        line_no=line_no,
-                        text=compact_text(clean, 240),
-                        link=self._page_link(workspace_id, project_id, page_key, page_links),
+                line_documents.append(
+                    SearchDocument(
+                        doc_id=f"{page_key}:{line_no}",
+                        text=clean,
+                        metadata={
+                            "page_key": page_key,
+                            "line_no": line_no,
+                            "page_score": page_score,
+                            "preferred": page_key in preferred_pages,
+                            "order": order,
+                        },
                     )
                 )
-                if len([item for item in evidence if item.page_key == page_key]) >= 2:
-                    break
+                order += 1
+
+        line_scores = {
+            document.doc_id: score
+            for document, score in rank_bm25(question, line_documents, include_zero=True)
+        }
+        scored_lines: list[tuple[float, int, SearchDocument]] = []
+        for document in line_documents:
+            page_score = float(document.metadata["page_score"])
+            line_score = line_scores.get(document.doc_id, 0.0)
+            is_preferred = bool(document.metadata["preferred"])
+            if line_score <= 0 and page_score <= 0 and not is_preferred:
+                continue
+            preferred_bonus = 0.45 if is_preferred else 0.0
+            page_key = str(document.metadata["page_key"])
+            page_weight = self._page_evidence_weight(page_key, question)
+            total_score = (line_score + page_score * 0.2 + preferred_bonus) * page_weight
+            scored_lines.append((total_score, int(document.metadata["order"]), document))
+        scored_lines.sort(key=lambda item: (-item[0], item[1]))
+
+        evidence: list[Evidence] = []
+        per_page_count: dict[str, int] = {}
+        for score, _, document in scored_lines:
+            if score <= 0:
+                continue
+            page_key = str(document.metadata["page_key"])
+            if per_page_count.get(page_key, 0) >= 2:
+                continue
+            line_no = int(document.metadata["line_no"])
+            evidence.append(
+                Evidence(
+                    page_key=page_key,
+                    line_no=line_no,
+                    text=compact_text(document.text, 240),
+                    link=self._page_link(workspace_id, project_id, page_key, page_links),
+                )
+            )
+            per_page_count[page_key] = per_page_count.get(page_key, 0) + 1
             if len(evidence) >= 8:
                 break
         return evidence[:8]
+
+    def _page_evidence_weight(self, page_key: str, question: str) -> float:
+        navigation_pages = {"index", "sources", "log"}
+        asks_for_navigation = any(
+            word in question for word in ["来源", "资料", "文档", "链接", "日志", "记录"]
+        )
+        if page_key in navigation_pages and not asks_for_navigation:
+            return 0.15
+        return 1.0
 
     def _preferred_pages(self, question: str) -> list[str]:
         if any(word in question for word in ["周报", "汇报", "进展", "复盘"]):
@@ -286,7 +333,8 @@ class WorkMemoryEngine:
 
     def _clean_wiki_line(self, line: str) -> str:
         clean = line.strip()
-        clean = clean.removeprefix("- ").strip()
+        while clean.startswith("- "):
+            clean = clean.removeprefix("- ").strip()
         if not clean:
             return ""
         if clean.startswith("#") or clean.startswith("更新时间"):

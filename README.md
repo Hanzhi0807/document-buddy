@@ -99,6 +99,7 @@ AI 客户端基于带引用的 wiki 证据回答
 
 - 回答任何项目问题前，必须调用 `query_project_wiki` 或 `get_cited_context`。
 - 工具只返回 wiki 中可引用的证据。
+- 查询证据时使用轻量 BM25 排序，优先返回更贴近问题的页面和行。
 - AI 客户端只能基于返回的 `citations` 回答。
 - 没有 `citations`，就必须说 wiki 没有证据，不能补编。
 - 发现冲突时，冲突写入 `open-questions`，由用户确认。
@@ -288,7 +289,7 @@ AI 客户端：只根据引用回答用户
 - `read_wiki_page`：读取某个 wiki 页面。
 - `get_feishu_wiki_sync_plan`：把当前 wiki 打包成飞书知识库/云文档的创建或更新清单。
 - `get_cited_context`：根据问题返回带引用的 wiki 证据。
-- `query_project_wiki`：`get_cited_context` 的别名，回答问题前应调用它。
+- `query_project_wiki`：`get_cited_context` 的别名，回答问题前应调用它；内部会用轻量 BM25 从 wiki 页面和行里找证据。
 - `lint_project_wiki`：检查缺失页面、薄页面、未解决冲突。
 - `detect_conflicts`：列出未解决冲突。
 - `list_review_items`：列出需要用户或 AI 复核的轻量事项。
@@ -364,6 +365,7 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 - 来源链接和来源行号提示。
 - 冲突检测与轻量 review 列表。
 - 带引用上下文查询。
+- 中文友好的轻量 BM25 检索。
 - 飞书可见层同步清单。
 - 无引用不回答的规则。
 - 离线飞书接入演示。

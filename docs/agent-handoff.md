@@ -17,7 +17,7 @@
 - 不是：飞书机器人 SaaS、本地 Web UI、公网 webhook 服务、LLM API 托管服务。
 - LLM 来源：用户自己的 AI 客户端或企业模型配置。
 - 飞书读写：优先交给飞书官方 MCP、Lark CLI 或未来 Docs add-on。
-- 文档搭子职责：整理 wiki、维护页面结构、保留 citations、检测冲突、生成飞书可见层同步清单。
+- 文档搭子职责：整理 wiki、维护页面结构、用轻量 BM25 检索 citations、检测冲突、生成飞书可见层同步清单。
 
 ## 必须遵守的回答规则
 
@@ -103,14 +103,44 @@ python -c "from work_memory.mcp_server import MCPServer; s=MCPServer(); print(le
 - `work_memory/toolkit.py`：工具层 API。
 - `work_memory/mcp_server.py`：MCP 工具暴露。
 - `work_memory/engine.py`：ingest、维护、引用查询逻辑。
+- `work_memory/retrieval.py`：无依赖 BM25 检索与中英文分词。
 - `examples/run_offline_demo.py`：离线飞书模拟演示。
 - `tests/test_toolkit_smoke.py`：核心 smoke test。
 
-## 最近一次功能提交
+## 本轮开始前最近提交
 
-- `cbbf70e Add Feishu visible wiki sync plan`
+- `5a29c1a Add agent handoff docs`
 
 ## 本轮交接记录
+
+### 2026-06-24：补轻量 BM25 检索
+
+本轮目标：
+
+- 接受外部评价里“检索层太弱”的问题，先补一个无外部依赖、中文可用的轻量 BM25 检索。
+- 保持项目边界：不引入 embedding 服务、不保存 API key、不新增服务端。
+
+本轮改动：
+
+- 新增 `work_memory/retrieval.py`：提供 `SearchDocument`、`tokenize_search_text`、`rank_bm25`。
+- 更新 `work_memory/engine.py`：`query_project_wiki` / `get_cited_context` 的证据选择改为页面级 + 行级 BM25 排序，并保留会前、周报、风险等场景页偏好。
+- 降低 `index`、`sources`、`log` 这类导航页在普通问题中的证据权重，减少无关来源清单被排到前面。
+- 修复 wiki 列表项被回答成 `- - 内容` 的显示问题。
+- 新增 `tests/test_retrieval.py`，并在 smoke test 中验证“客户培训”能优先命中“部署培训安排”这类更具体的行。
+- 更新 README、`docs/mcp-toolkit.md`、`docs/wiki-schema.md`，说明检索层已经使用轻量 BM25。
+
+本轮验证：
+
+- `python -m unittest discover -s tests`：通过，5 个测试通过。
+- `python -m compileall work_memory tests examples`：通过。
+- `python examples\run_offline_demo.py`：通过，离线飞书演示仍能 ingest、生成飞书同步清单、返回 citations、列出 review items。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+
+下一位 agent 应该继续：
+
+- 晚上真实接入飞书后，优先验证 citations 是否能从 BM25 结果指向飞书 wiki 页面或原始飞书资料。
+- 如果继续补检索层，可以考虑 SQLite FTS5 或本地 embedding，但要保持无服务端、不持有 API key 的边界。
+- 另一个重要方向是把“host LLM 按 `get_wiki_maintenance_contract` 精修 wiki 页面”的流程做成更清晰的可测试链路。
 
 ### 2026-06-24：新增交接机制
 

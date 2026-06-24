@@ -94,6 +94,33 @@ class ToolkitSmokeTest(unittest.TestCase):
             self.assertTrue(resolved["resolved"])
             self.assertEqual([], toolkit.detect_conflicts("tenant-a", "A客户项目")["conflicts"])
 
+    def test_query_uses_bm25_line_ranking(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            toolkit = WorkMemoryToolkit(Path(tmp))
+            toolkit.upsert_wiki_page(
+                workspace_id="tenant-a",
+                project="A客户项目",
+                page_key="requirements",
+                markdown="\n".join(
+                    [
+                        "# A客户项目 需求与关注点",
+                        "",
+                        "- 客户需要周五前看到报价方案。",
+                        "- 客户关注部署培训安排。",
+                        "- 客户希望页面用蓝色。",
+                    ]
+                ),
+            )
+
+            answer = toolkit.query_project_wiki("tenant-a", "A客户项目", "客户培训")
+            bullet_lines = [
+                line for line in answer["context"].splitlines() if line.startswith("- ")
+            ]
+
+            self.assertTrue(bullet_lines)
+            self.assertIn("部署培训", bullet_lines[0])
+            self.assertTrue(answer["citations"])
+
 
 if __name__ == "__main__":
     unittest.main()

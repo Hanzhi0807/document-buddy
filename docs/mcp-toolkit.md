@@ -121,11 +121,11 @@ python examples/run_offline_demo.py
 
 ### get_cited_context
 
-根据问题返回带引用的 wiki 证据。这个工具不负责自由发挥，只返回可引用上下文。
+根据问题返回带引用的 wiki 证据。这个工具不负责自由发挥，只返回可引用上下文；检索层使用轻量 BM25 对 wiki 页面和行排序，减少纯关键词顺序带来的误召回。
 
 ### query_project_wiki
 
-`get_cited_context` 的别名。建议 AI 客户端在回答任何项目问题前都调用它。
+`get_cited_context` 的别名。建议 AI 客户端在回答任何项目问题前都调用它。内部同样使用轻量 BM25 检索 wiki 证据。
 
 ### lint_project_wiki
 

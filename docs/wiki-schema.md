@@ -34,7 +34,7 @@
 
 ## 回答方式
 
-回答任何项目问题前，必须调用 `query_project_wiki` 或 `get_cited_context`。
+回答任何项目问题前，必须调用 `query_project_wiki` 或 `get_cited_context`。工具会用轻量 BM25 从 wiki 页面和行里找证据，但回答仍然只能使用返回的 citations。
 
 - 有 citations：只基于 citations 回答，并保留引用链接。
 - 没有 citations：说明 wiki 没有证据，不要补编。
