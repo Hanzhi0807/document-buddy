@@ -28,11 +28,11 @@ class WorkMemoryToolkit:
     composes answers only from the cited context returned by the tools.
     """
 
-    def __init__(self, data_dir: Path, citation_base_url: str = ""):
+    def __init__(self, data_dir: Path):
         self.data_dir = data_dir
         self.db = Database(data_dir / "state.sqlite")
         self.storage = LocalStorageProvider(data_dir)
-        self.engine = WorkMemoryEngine(self.db, self.storage, citation_base_url=citation_base_url)
+        self.engine = WorkMemoryEngine(self.db, self.storage)
 
     def create_project_memory(self, workspace_id: str, project: str) -> dict[str, Any]:
         project_id = slugify(project, "default")
@@ -186,5 +186,4 @@ def create_default_toolkit() -> WorkMemoryToolkit:
     import os
 
     data_dir = Path(os.getenv("WORK_MEMORY_DATA_DIR", "data")).expanduser().resolve()
-    citation_base_url = os.getenv("WORK_MEMORY_PUBLIC_BASE_URL", "")
-    return WorkMemoryToolkit(data_dir=data_dir, citation_base_url=citation_base_url)
+    return WorkMemoryToolkit(data_dir=data_dir)

@@ -38,10 +38,9 @@ class AnswerResult:
 
 
 class WorkMemoryEngine:
-    def __init__(self, db: Database, storage: StorageProvider, citation_base_url: str = ""):
+    def __init__(self, db: Database, storage: StorageProvider):
         self.db = db
         self.storage = storage
-        self.citation_base_url = citation_base_url.rstrip("/")
 
     def upload_content(
         self,
@@ -309,11 +308,6 @@ class WorkMemoryEngine:
         uri = page_links.get(page_key, "")
         if uri.startswith("http://") or uri.startswith("https://"):
             return uri
-        if self.citation_base_url:
-            return (
-                f"{self.citation_base_url}/api/wiki?workspace_id={quote(workspace_id)}"
-                f"&project={quote(project_id)}&page={quote(page_key)}"
-            )
         return f"wiki://{quote(workspace_id)}/{quote(project_id)}/{quote(page_key)}"
 
     def _citation(self, evidence: Evidence) -> str:

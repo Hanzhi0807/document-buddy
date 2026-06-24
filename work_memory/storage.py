@@ -118,16 +118,3 @@ class LocalStorageProvider(StorageProvider):
             pages[path.stem] = path.read_text(encoding="utf-8")
         return pages
 
-
-class FeishuDocsStorageProvider(LocalStorageProvider):
-    """Feishu-first storage shape with local cache.
-
-    The MVP keeps a local cache for validation and mirrors the provider boundary that
-    a production Feishu deployment uses to write wiki pages into Feishu Docs/Wiki.
-    This lets the platform adapter and engine stay stable while the actual Feishu
-    document-write implementation is completed with tenant credentials.
-    """
-
-    def __init__(self, root: Path, docs_space_token: str = ""):
-        super().__init__(root)
-        self.docs_space_token = docs_space_token

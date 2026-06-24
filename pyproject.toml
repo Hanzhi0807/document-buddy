@@ -1,7 +1,7 @@
 [project]
 name = "gongzuo-wendang-dazi"
 version = "0.1.0"
-description = "工作文档搭子：一个优先接入飞书等办公平台的项目文档记忆助手。"
+description = "工作文档搭子：无服务端的飞书优先 MCP 项目文档记忆工具包。"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -16,7 +16,6 @@ parsers = [
 ]
 
 [project.scripts]
-wendang-dazi = "work_memory.server:main"
 wendang-dazi-mcp = "work_memory.mcp_server:main"
 
 [tool.ruff]
