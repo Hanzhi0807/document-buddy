@@ -106,7 +106,7 @@ class App:
             )
         else:
             storage = LocalStorageProvider(self.settings.data_dir)
-        self.engine = WorkMemoryEngine(db=db, storage=storage)
+        self.engine = WorkMemoryEngine(db=db, storage=storage, citation_base_url=self.settings.public_base_url)
         self.feishu = FeishuAdapter(
             engine=self.engine,
             app_id=self.settings.feishu_app_id,
@@ -132,6 +132,16 @@ class Handler(BaseHTTPRequestHandler):
             query = parse_qs(urlparse(self.path).query)
             workspace_id = query.get("workspace_id", ["local-demo"])[0]
             self._send_json({"projects": APP.engine.list_projects(workspace_id)})
+        elif path == "/api/wiki":
+            query = parse_qs(urlparse(self.path).query)
+            workspace_id = query.get("workspace_id", ["local-demo"])[0]
+            project = query.get("project", ["默认项目"])[0]
+            page = query.get("page", [""])[0]
+            content = APP.engine.read_wiki_page(workspace_id, project, page)
+            if content:
+                self._send_markdown(content)
+            else:
+                self.send_error(HTTPStatus.NOT_FOUND)
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -171,7 +181,7 @@ class Handler(BaseHTTPRequestHandler):
                     question=body.get("question", ""),
                 )
                 self._send_json(
-                    {"project_id": result.project_id, "answer": result.answer, "sources": result.sources}
+                    {"project_id": result.project_id, "answer": result.answer, "sources": result.sources, "citations": result.citations}
                 )
             elif path == "/webhook/feishu":
                 result = APP.feishu.handle_event(body)
@@ -203,6 +213,14 @@ class Handler(BaseHTTPRequestHandler):
         raw = html.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def _send_markdown(self, markdown: str) -> None:
+        raw = markdown.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/markdown; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)

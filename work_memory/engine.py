@@ -4,12 +4,13 @@ import base64
 import json
 import re
 from dataclasses import dataclass
+from urllib.parse import quote
 
 from .compiler import compile_project_memory
 from .db import Database
 from .extractors import extract_text
 from .storage import StorageProvider
-from .utils import compact_text, sha256_bytes, slugify, utc_now
+from .utils import compact_text, sha256_bytes, slugify
 
 
 @dataclass(frozen=True)
@@ -21,16 +22,26 @@ class UploadResult:
 
 
 @dataclass(frozen=True)
+class Evidence:
+    page_key: str
+    line_no: int
+    text: str
+    link: str
+
+
+@dataclass(frozen=True)
 class AnswerResult:
     project_id: str
     answer: str
     sources: list[str]
+    citations: list[str]
 
 
 class WorkMemoryEngine:
-    def __init__(self, db: Database, storage: StorageProvider):
+    def __init__(self, db: Database, storage: StorageProvider, citation_base_url: str = ""):
         self.db = db
         self.storage = storage
+        self.citation_base_url = citation_base_url.rstrip("/")
 
     def upload_content(
         self,
@@ -141,88 +152,181 @@ class WorkMemoryEngine:
         project_id = slugify(project, "default")
         pages = self.storage.list_wiki_pages(workspace_id, project_id)
         if not pages:
-            answer = "我还没有这个项目的资料。先把会议纪要、文档、链接或聊天摘录发给我。"
-            return AnswerResult(project_id=project_id, answer=answer, sources=[])
+            answer = "工作文档搭子还没有这个项目的 wiki 资料。先把会议纪要、文档、链接或聊天摘录发给我。"
+            return AnswerResult(project_id=project_id, answer=answer, sources=[], citations=[])
 
+        page_links = {row["page_key"]: row["uri"] for row in self.db.list_pages(workspace_id, project_id)}
         ranked = self._rank_pages(question, pages)
-        conflicts = self.db.open_conflicts(workspace_id, project_id)
-        answer = self._compose_answer(project_id, question, ranked, [row["description"] for row in conflicts])
-        sources = [page for page, _score, _text in ranked[:4]]
+        evidence = self._collect_evidence(workspace_id, project_id, question, ranked, page_links)
+        if not evidence:
+            answer = self._no_evidence_answer(project_id)
+            self.db.add_conversation(workspace_id, project_id, question, answer)
+            return AnswerResult(project_id=project_id, answer=answer, sources=[], citations=[])
+
+        answer = self._compose_cited_answer(project_id, question, evidence)
+        sources = self._unique([item.page_key for item in evidence])
+        citations = self._unique([self._citation(item) for item in evidence])
         self.db.add_conversation(workspace_id, project_id, question, answer)
         self.db.add_event(
             workspace_id,
             project_id,
             "question_answered",
-            json.dumps({"question": question, "sources": sources}, ensure_ascii=False),
+            json.dumps({"question": question, "sources": sources, "citations": citations}, ensure_ascii=False),
         )
-        return AnswerResult(project_id=project_id, answer=answer, sources=sources)
+        return AnswerResult(project_id=project_id, answer=answer, sources=sources, citations=citations)
 
     def list_projects(self, workspace_id: str) -> list[str]:
         return self.db.list_projects(workspace_id)
 
+    def read_wiki_page(self, workspace_id: str, project: str, page_key: str) -> str:
+        return self.storage.read_wiki_page(workspace_id, slugify(project, "default"), page_key)
+
     def _rank_pages(self, question: str, pages: dict[str, str]) -> list[tuple[str, int, str]]:
-        terms = [term for term in re.split(r"\W+", question.lower()) if term]
+        terms = self._question_terms(question)
         ranked: list[tuple[str, int, str]] = []
         for key, text in pages.items():
             lowered = text.lower()
-            score = sum(lowered.count(term) for term in terms)
+            score = sum(lowered.count(term.lower()) for term in terms)
             if key in question.lower():
                 score += 5
             ranked.append((key, score, text))
         ranked.sort(key=lambda item: item[1], reverse=True)
         return ranked
 
-    def _compose_answer(
+    def _collect_evidence(
         self,
+        workspace_id: str,
         project_id: str,
         question: str,
         ranked: list[tuple[str, int, str]],
-        conflicts: list[str],
-    ) -> str:
-        joined = "\n\n".join(text for _key, _score, text in ranked[:4])
-        q = question.lower()
-        if any(word in question for word in ["周报", "汇报", "进展"]):
-            opening = f"「{project_id}」本周可以这样汇报："
-            focus = self._section_answer(joined, ["需求", "风险", "承诺", "决策"])
-        elif any(word in question for word in ["会议", "开会", "准备"]):
-            opening = f"和「{project_id}」开会前，建议先看这几件事："
-            focus = self._section_answer(joined, ["需求", "风险", "承诺"])
-        elif any(word in question for word in ["风险", "卡", "问题"]):
-            opening = f"「{project_id}」当前风险主要是："
-            focus = self._section_answer(joined, ["风险", "预算", "延期", "法务"])
-        elif "邮件" in question or "email" in q:
-            opening = f"可以基于「{project_id}」当前记忆写这封邮件："
-            focus = "您好，\n\n根据我们最近沟通的信息，我整理了当前重点、待确认事项和下一步建议。请您确认是否准确。\n\n"
-            focus += self._section_answer(joined, ["需求", "承诺", "风险"])
-        else:
-            opening = f"根据「{project_id}」目前的项目记忆，我的回答是："
-            focus = self._section_answer(joined, [])
+        page_links: dict[str, str],
+    ) -> list[Evidence]:
+        preferred_pages = self._preferred_pages(question)
+        ranked_by_key = {page_key: (score, text) for page_key, score, text in ranked}
+        ordered: list[tuple[str, int, str]] = []
+        for page_key in preferred_pages:
+            if page_key in ranked_by_key:
+                score, text = ranked_by_key[page_key]
+                ordered.append((page_key, score + 10, text))
+        for page_key, score, text in ranked:
+            if page_key not in preferred_pages:
+                ordered.append((page_key, score, text))
 
-        conflict_text = ""
-        if conflicts:
-            conflict_text = "\n\n需要你确认：\n" + "\n".join(f"- {item}" for item in conflicts[:3])
-
-        citation_text = "\n\n参考的项目记忆页：" + "、".join(page for page, _score, _text in ranked[:4])
-        return opening + "\n\n" + focus + conflict_text + citation_text
-
-    def _section_answer(self, text: str, hints: list[str]) -> str:
-        lines = []
-        for line in text.splitlines():
-            clean = line.strip(" -")
-            if not clean or clean.startswith("#") or clean.startswith("更新时间"):
+        terms = self._question_terms(question)
+        evidence: list[Evidence] = []
+        for page_key, score, text in ordered:
+            allow_general = page_key in preferred_pages or score > 0
+            if not allow_general:
                 continue
-            if hints and not any(hint in clean for hint in hints):
-                continue
-            lines.append(compact_text(clean, 220))
-            if len(lines) >= 6:
-                break
-        if not lines:
-            for line in text.splitlines():
-                clean = line.strip(" -")
-                if clean and not clean.startswith("#") and not clean.startswith("更新时间"):
-                    lines.append(compact_text(clean, 220))
-                if len(lines) >= 6:
+            for line_no, raw_line in enumerate(text.splitlines(), start=1):
+                clean = self._clean_wiki_line(raw_line)
+                if not clean:
+                    continue
+                if page_key not in preferred_pages and terms:
+                    lowered = clean.lower()
+                    if not any(term.lower() in lowered for term in terms):
+                        continue
+                evidence.append(
+                    Evidence(
+                        page_key=page_key,
+                        line_no=line_no,
+                        text=compact_text(clean, 240),
+                        link=self._page_link(workspace_id, project_id, page_key, page_links),
+                    )
+                )
+                if len([item for item in evidence if item.page_key == page_key]) >= 2:
                     break
-        if not lines:
-            return "目前资料还不够，我没有找到可靠答案。你可以继续发会议纪要、文档或聊天摘录给我。"
-        return "\n".join(f"- {line}" for line in lines)
+            if len(evidence) >= 8:
+                break
+        return evidence[:8]
+
+    def _preferred_pages(self, question: str) -> list[str]:
+        if any(word in question for word in ["周报", "汇报", "进展", "复盘"]):
+            return ["overview", "decisions", "commitments", "risks", "open-questions"]
+        if any(word in question for word in ["会议", "开会", "准备", "会前"]):
+            return ["commitments", "risks", "requirements", "open-questions", "decisions"]
+        if any(word in question for word in ["风险", "卡", "问题", "冲突"]):
+            return ["risks", "open-questions", "commitments"]
+        if any(word in question for word in ["邮件", "email", "跟进"]):
+            return ["requirements", "commitments", "risks", "decisions"]
+        return []
+
+    def _compose_cited_answer(self, project_id: str, question: str, evidence: list[Evidence]) -> str:
+        if any(word in question for word in ["周报", "汇报", "进展", "复盘"]):
+            heading = "可确认的周报素材"
+        elif any(word in question for word in ["会议", "开会", "准备", "会前"]):
+            heading = "开会前可确认的要点"
+        elif any(word in question for word in ["风险", "卡", "问题", "冲突"]):
+            heading = "wiki 中可确认的风险/问题"
+        elif any(word in question for word in ["邮件", "email", "跟进"]):
+            heading = "可用于邮件的确认信息"
+        else:
+            heading = "wiki 中可确认的信息"
+
+        lines = [
+            f"我只根据「{project_id}」wiki 里能确认的信息回答；wiki 没有的内容不补编。",
+            "",
+            f"{heading}：",
+        ]
+        for item in evidence:
+            lines.append(f"- {item.text} {self._citation(item)}")
+        lines.append("")
+        lines.append("引用页：" + "、".join(self._unique([self._page_reference(item) for item in evidence])))
+        return "\n".join(lines)
+
+    def _no_evidence_answer(self, project_id: str) -> str:
+        return (
+            f"我只能根据「{project_id}」wiki 回答。当前 wiki 没有可引用内容支持这个问题，"
+            "所以我不编造答案。请补充会议纪要、文档、聊天摘录或网页链接后再问。"
+        )
+
+    def _clean_wiki_line(self, line: str) -> str:
+        clean = line.strip()
+        clean = clean.removeprefix("- ").strip()
+        if not clean:
+            return ""
+        if clean.startswith("#") or clean.startswith("更新时间"):
+            return ""
+        if clean.startswith("暂无") or "还没有明确提取" in clean:
+            return ""
+        return clean
+
+    def _question_terms(self, question: str) -> list[str]:
+        terms = [term for term in re.split(r"\W+", question.lower()) if len(term) > 1]
+        cjk_terms = re.findall(r"[\u4e00-\u9fff]{2,}", question)
+        for term in cjk_terms:
+            if term not in terms:
+                terms.append(term)
+        return terms
+
+    def _page_link(
+        self,
+        workspace_id: str,
+        project_id: str,
+        page_key: str,
+        page_links: dict[str, str],
+    ) -> str:
+        uri = page_links.get(page_key, "")
+        if uri.startswith("http://") or uri.startswith("https://"):
+            return uri
+        if self.citation_base_url:
+            return (
+                f"{self.citation_base_url}/api/wiki?workspace_id={quote(workspace_id)}"
+                f"&project={quote(project_id)}&page={quote(page_key)}"
+            )
+        return f"wiki://{quote(workspace_id)}/{quote(project_id)}/{quote(page_key)}"
+
+    def _citation(self, evidence: Evidence) -> str:
+        return f"[{evidence.page_key}:L{evidence.line_no}]({evidence.link}#L{evidence.line_no})"
+
+    def _page_reference(self, evidence: Evidence) -> str:
+        return f"[{evidence.page_key}]({evidence.link})"
+
+    def _unique(self, items: list[str]) -> list[str]:
+        seen: set[str] = set()
+        unique_items: list[str] = []
+        for item in items:
+            if item not in seen:
+                seen.add(item)
+                unique_items.append(item)
+        return unique_items
