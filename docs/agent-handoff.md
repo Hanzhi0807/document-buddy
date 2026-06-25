@@ -343,3 +343,31 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 - 可以用离线 demo 数据跑 `scripts/sync_to_feishu.py --dry-run` 作为轻量验证。
 - 如果要做截图/录屏，请使用脱敏演示项目，不要截真实飞书资料或真实账号信息。
 - 后续如果要继续提高复用性，可以把 `scripts/sync_to_feishu.py` 包装成 console script，但不必引入服务端。
+
+### 2026-06-25：README 双语与公开推广润色
+
+本轮目标：
+
+- 为 Karpathy gist 评论准备一段中文项目介绍。
+- 将 README 改成中英文两版，默认展开中文。
+- 删除 README 里的离线演示、检查口径、历史方案说明，把重点放到真实飞书环境如何使用。
+- 增强项目的搜索与 star 友好度。
+
+本轮改动：
+
+- README 改为 GitHub 兼容的双语折叠页签：中文默认展开，English 可展开查看。
+- README 开头保留白领使用场景，直接说明真实飞书环境里的安装、MCP 启动、飞书资料 ingest、同步到飞书知识库、带 citations 问答。
+- README 删除离线演示和“飞书优先方案”等历史说明，整体更短、更面向外部读者。
+- README 增加 CI/license/MCP/Feishu badges 和关键词区。
+- `pyproject.toml` 增加 package keywords，并把 description 改成更利于英文搜索的表述。
+- CHANGELOG 记录 README 和 discoverability 更新。
+
+隐私注意：
+
+- 本轮没有写入真实飞书 token、真实 Wiki URL、真实账号信息或测试资料内容。
+- README 示例均使用占位符或 A客户项目示例。
+
+下一位 agent 应该继续：
+
+- 如果用户要把 gist 评论发出去，可直接用最终回复里的中文短介绍。
+- 后续截图/录屏仍应使用脱敏示例，不要截真实飞书资料。

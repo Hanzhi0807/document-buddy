@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reworked README into bilingual Chinese-first and English sections focused on real Feishu usage.
+- Added package keywords for MCP, Feishu/Lark, llm-wiki, cited answers, and anti-hallucination discoverability.
 - Added Feishu-safe Markdown export for sync plans so imported Docx pages keep a single H1 title.
 - Added `scripts/sync_to_feishu.py` to sync generated wiki pages to Feishu via the user's local `lark-cli` and backfill citation URLs.
 - Updated README to describe the project as MVP usable after real Feishu write-back validation.

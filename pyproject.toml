@@ -1,11 +1,12 @@
 [project]
 name = "document-buddy"
 version = "0.2.0"
-description = "文档搭子（Document Buddy）：无服务端的飞书优先 MCP 项目文档记忆工具包。"
+description = "Document Buddy: serverless MCP project memory for Feishu/Lark with cited wiki answers."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "Document Buddy Contributors" }]
+keywords = ["mcp", "feishu", "lark", "llm-wiki", "project-memory", "citations", "knowledge-base", "anti-hallucination"]
 dependencies = []
 
 [project.optional-dependencies]
