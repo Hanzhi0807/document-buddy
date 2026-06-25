@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Split English README into `README.en.md` and added top navigation for Chinese README, English README, and MIT License.
 - Reworked README into bilingual Chinese-first and English sections focused on real Feishu usage.
 - Added package keywords for MCP, Feishu/Lark, llm-wiki, cited answers, and anti-hallucination discoverability.
 - Added Feishu-safe Markdown export for sync plans so imported Docx pages keep a single H1 title.

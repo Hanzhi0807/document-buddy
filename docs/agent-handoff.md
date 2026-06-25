@@ -371,3 +371,21 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 
 - 如果用户要把 gist 评论发出去，可直接用最终回复里的中文短介绍。
 - 后续截图/录屏仍应使用脱敏示例，不要截真实飞书资料。
+
+### 2026-06-25：README 语言入口拆分
+
+本轮目标：
+
+- 根据用户反馈，把 README 内部折叠页签改成更接近 GitHub 仓库入口的多文件语言入口。
+
+本轮改动：
+
+- `README.md` 只保留中文默认介绍。
+- 新增 `README.en.md`，放独立英文介绍。
+- 两个 README 顶部都加入 `README 中文 / README English / MIT License` 导航。
+- 保留中文默认展示，同时让英文介绍有独立文件入口，接近用户希望的“中文介绍 / 英文介绍 / MIT License”入口形式。
+- CHANGELOG 记录语言入口拆分。
+
+说明：
+
+- GitHub 原生的 README / license 区域不能由仓库文件直接改名或增加自定义 tab；当前实现是最接近且最通用的开源项目做法。
