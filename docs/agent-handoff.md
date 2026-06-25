@@ -279,3 +279,40 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 
 - 晚上接入真实飞书能力后，从 `docs/feishu-quickstart.md` 和本文件的“晚上真实飞书接入的建议顺序”开始。
 - 做完后更新本文件的“本轮交接记录”，写明验证命令和结果；最终回复里补充最新 commit hash。
+
+### 2026-06-25：真实飞书可见层验证（脱敏记录）
+
+本轮目标：
+
+- 在真实飞书环境中验证 Document Buddy 的飞书可见 wiki 形态。
+- 使用用户提供的测试资料完成 ingest、wiki 页面生成、飞书知识库写回和引用链接回填。
+- 避免把真实飞书账号、文件 token、文件夹 token、Wiki URL、授权链接或测试资料内容提交到 GitHub。
+
+本轮结果：
+
+- 飞书 CLI user 身份授权补齐，新增文档写入权限后可创建/更新 Docx/Wiki 页面。
+- 在用户个人知识库中创建了 Document Buddy 根节点、一个测试项目节点和 10 个 wiki 子页面。
+- 10 个页面均已写入飞书 Docx 内容，并回填到本地 SQLite `wiki_pages.uri`，因此后续 citations 指向飞书 Wiki URL，而不是本地 `wiki://`。
+- 真实问答验证通过：询问预算时返回 evidence-only 答案，citations 均为飞书 Wiki 页面链接。
+- `get_feishu_wiki_sync_plan` 验证通过：10 个页面全部 `has_external_url = true`。
+- `list_review_items` 验证通过：预算口径冲突被保留为待确认项。
+- 飞书页面标题验证通过：子节点列表显示 10 个页面，其中“项目总览”曾因 Markdown 多个 H1 显示为 Untitled，已通过飞书写入层临时降级后续 H1 修复。
+
+隐私与仓库状态：
+
+- 本次真实测试的飞书资料下载件、二维码、临时页面导出都在 `.tmp-feishu-ingest/`，该目录已加入 `.gitignore`。
+- 本地 `data/` 仍是忽略目录，包含真实测试缓存、SQLite 状态和本地 wiki，不应提交。
+- 交接文档只记录脱敏结果，不记录真实飞书链接、token、账号 open_id、姓名或测试项目资料细节。
+
+验证命令摘要：
+
+- `lark-cli doctor`：通过。
+- `lark-cli wiki +node-list --as user --space-id my_library --parent-node-token <project_node> --page-all --format json`：返回 10 个子页面。
+- `query_project_wiki(<workspace>, <project>, "客户的预算是多少？")`：返回 citations，且 citations 指向飞书 Wiki URL。
+- `get_feishu_wiki_sync_plan(...)`：10/10 页面已有 external URL。
+
+下一位 agent 应该继续：
+
+- 不要把 `data/` 或 `.tmp-feishu-ingest/` 中的真实测试资料提交到 GitHub。
+- 如果要改进 Feishu-visible 写入层，优先把“写入飞书前只保留第一个 H1，其余 H1 降级”的规则产品化，避免 Docx 标题变成 Untitled。
+- 下一步产品化方向可以是：用一个更轻的 `sync_to_feishu` 辅助脚本/文档流程，把“生成同步计划 -> 创建/更新飞书页面 -> 回填 URL -> 验证 citations”固定下来，但仍保持 MCP 工具包不持有服务端和 token。
