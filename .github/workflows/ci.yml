@@ -17,7 +17,7 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests
       - name: Compile modules
-        run: python -m compileall work_memory tests examples
+        run: python -m compileall work_memory tests examples scripts
       - name: Run offline demo
         run: python examples/run_offline_demo.py
       - name: Type check

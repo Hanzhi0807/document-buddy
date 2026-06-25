@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added Feishu-safe Markdown export for sync plans so imported Docx pages keep a single H1 title.
+- Added `scripts/sync_to_feishu.py` to sync generated wiki pages to Feishu via the user's local `lark-cli` and backfill citation URLs.
+- Updated README to describe the project as MVP usable after real Feishu write-back validation.
+
 ## 0.2.0 - 2026-06-24
 
 - Added GitHub Actions CI for tests, compile checks, offline demo, and mypy.

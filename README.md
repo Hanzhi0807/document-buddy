@@ -1,6 +1,6 @@
-# 文档搭子（Document Buddy，未完成，建设中）
+# 文档搭子（Document Buddy）
 
-文档搭子（Document Buddy）是一个基于 karpathy/llm-wiki.md 思路打造的 **无服务端 MCP 工具包**。
+文档搭子（Document Buddy）是一个基于 karpathy/llm-wiki.md 思路打造的 **无服务端 MCP 工具包**。MVP 已可用：离线演示、真实飞书知识库写回、带飞书 citation 的问答链路都已经跑通。
 
 它不做飞书机器人 SaaS，不接公网 webhook，也不托管任何 LLM API key。它停留在工具层：帮助用户或 AI 客户端把飞书文档、飞书知识库、群消息、会议纪要、PDF、网页资料整理成可追溯引用的项目 wiki。
 
@@ -106,7 +106,7 @@ AI 客户端基于带引用的 wiki 证据回答
 
 ## 小白上手：先跑通一遍
 
-现在还没有连飞书，也可以先用模拟资料跑完整闭环。你只需要确认这件事：文档搭子能不能把“资料”变成“可引用的项目记忆”。
+即使还没有连飞书，也可以先用模拟资料跑完整闭环。真实飞书链路已经验证通过；你可以先确认这件事：文档搭子能不能把“资料”变成“可引用的项目记忆”。
 
 ### 30 秒快速验证
 
@@ -185,6 +185,29 @@ AI 客户端拿到这些以后，调用 `ingest_text`，参数大概长这样：
 ```
 
 接着调用 `get_feishu_wiki_sync_plan`，让 AI 客户端把页面清单写进飞书知识库或云文档。飞书返回页面链接后，再用 `upsert_wiki_page` 的 `external_url` 记录回来。
+
+### 第四步：同步到飞书可见 Wiki
+
+如果你已经装好并授权 `lark-cli`，可以用这个辅助脚本把同步流程固定下来：
+
+```bash
+python scripts/sync_to_feishu.py \
+  --workspace-id "你的团队或工作区标识" \
+  --project "A客户项目" \
+  --root-node-token "已有的文档搭子知识库节点 token"
+```
+
+第一次同步前可以先 dry-run：
+
+```bash
+python scripts/sync_to_feishu.py \
+  --workspace-id "你的团队或工作区标识" \
+  --project "A客户项目" \
+  --root-node-token "已有的文档搭子知识库节点 token" \
+  --dry-run
+```
+
+这个脚本只调用你本机已经登录的 `lark-cli`，不保存飞书 token，也不需要服务端。它会把 wiki 页面创建或更新到飞书知识库，并把飞书页面 URL 回填到本地索引里。写入飞书前，它会自动处理 Markdown 里多余的一级标题，避免页面标题变成 `Untitled`。
 
 之后你就可以问：
 
@@ -381,6 +404,8 @@ WORK_MEMORY_DATA_DIR=/path/to/work-memory-data
 - 带引用上下文查询。
 - 中文友好的轻量 BM25 检索。
 - 飞书可见层同步清单。
+- 真实飞书知识库写回验证。
+- `scripts/sync_to_feishu.py` 同步辅助脚本。
 - 无引用不回答的规则。
 - 离线飞书接入演示。
 - GitHub Actions CI。

@@ -8,3 +8,4 @@ data/
 .pytest_cache/
 .demo-data/
 .tmp-feishu-ingest/
+.tmp-document-buddy-sync-*/

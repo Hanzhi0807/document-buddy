@@ -316,3 +316,30 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 - 不要把 `data/` 或 `.tmp-feishu-ingest/` 中的真实测试资料提交到 GitHub。
 - 如果要改进 Feishu-visible 写入层，优先把“写入飞书前只保留第一个 H1，其余 H1 降级”的规则产品化，避免 Docx 标题变成 Untitled。
 - 下一步产品化方向可以是：用一个更轻的 `sync_to_feishu` 辅助脚本/文档流程，把“生成同步计划 -> 创建/更新飞书页面 -> 回填 URL -> 验证 citations”固定下来，但仍保持 MCP 工具包不持有服务端和 token。
+
+### 2026-06-25：固化飞书同步流程与 MVP 状态
+
+本轮目标：
+
+- 把真实飞书测试中踩到的 Markdown 多 H1 导致页面标题异常问题固化到工具层。
+- 把手工“生成同步计划 -> 创建/更新飞书页面 -> 回填 URL”的流程沉淀成可复用脚本。
+- 将 README 从“建设中”更新为 MVP 可用状态，同时保持项目边界：无服务端、不保存 LLM key、不保存飞书 token。
+
+本轮改动：
+
+- `work_memory.toolkit.prepare_feishu_markdown`：飞书同步计划会把正文里的第二个及后续 H1 降级为 H3，并跳过代码块，避免飞书 Docx 导入后显示 Untitled 或异常标题。
+- `get_feishu_wiki_sync_plan` 返回的 `markdown` 已经是飞书导入安全版本。
+- 新增 `scripts/sync_to_feishu.py`：通过本机 `lark-cli` 同步 wiki 页面到飞书知识库，支持 dry-run、现有 root/project 节点、创建/更新页面、回填 external_url。
+- README、`docs/feishu-visible-wiki.md`、`examples/README.md` 增加同步脚本用法，并把项目描述更新为 MVP 已可用。
+- `.gitignore` 增加 `.tmp-document-buddy-sync-*/`，避免脚本临时 Markdown 文件被误提交。
+
+隐私注意：
+
+- 本轮没有写入真实飞书 token、真实 Wiki URL、真实账号信息或测试资料内容。
+- 同步脚本只调用用户本机已授权的 `lark-cli`，不接管、不保存飞书凭证。
+
+下一位 agent 应该继续：
+
+- 可以用离线 demo 数据跑 `scripts/sync_to_feishu.py --dry-run` 作为轻量验证。
+- 如果要做截图/录屏，请使用脱敏演示项目，不要截真实飞书资料或真实账号信息。
+- 后续如果要继续提高复用性，可以把 `scripts/sync_to_feishu.py` 包装成 console script，但不必引入服务端。

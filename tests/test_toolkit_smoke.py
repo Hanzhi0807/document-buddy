@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from work_memory.toolkit import WorkMemoryToolkit
+from work_memory.toolkit import WorkMemoryToolkit, prepare_feishu_markdown
 
 
 class ToolkitSmokeTest(unittest.TestCase):
@@ -93,6 +93,44 @@ class ToolkitSmokeTest(unittest.TestCase):
             )
             self.assertTrue(resolved["resolved"])
             self.assertEqual([], toolkit.detect_conflicts("tenant-a", "A客户项目")["conflicts"])
+
+    def test_prepare_feishu_markdown_keeps_one_h1(self) -> None:
+        markdown = "\n".join(
+            [
+                "# 项目总览",
+                "",
+                "## 当前理解",
+                "",
+                "```md",
+                "# code fence heading stays literal",
+                "```",
+                "# 来源文档标题",
+            ]
+        )
+
+        prepared = prepare_feishu_markdown(markdown)
+
+        self.assertIn("# 项目总览", prepared)
+        self.assertIn("# code fence heading stays literal", prepared)
+        self.assertIn("### 来源文档标题", prepared)
+        body_h1_lines = [line for line in prepared.splitlines() if line == "# 来源文档标题"]
+        self.assertEqual([], body_h1_lines)
+
+    def test_feishu_sync_plan_uses_safe_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            toolkit = WorkMemoryToolkit(Path(tmp))
+            toolkit.upsert_wiki_page(
+                workspace_id="tenant-a",
+                project="A客户项目",
+                page_key="overview",
+                markdown="# A客户项目 项目总览\n\n# 飞书原文标题\n\n客户需要报价方案。\n",
+            )
+
+            sync_plan = toolkit.get_feishu_wiki_sync_plan("tenant-a", "A客户项目")
+            overview = next(page for page in sync_plan["pages"] if page["page_key"] == "overview")
+
+            self.assertIn("### 飞书原文标题", overview["markdown"])
+            self.assertNotIn("\n# 飞书原文标题", overview["markdown"])
 
     def test_query_uses_bm25_line_ranking(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

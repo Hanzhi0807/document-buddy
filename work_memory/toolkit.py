@@ -58,6 +58,40 @@ WIKI_CONTRACT = {
     ],
 }
 
+def prepare_feishu_markdown(markdown: str) -> str:
+    """Keep one top-level title for Feishu Docs Markdown import.
+
+    Feishu derives the Docx title from the first H1. Extra H1 lines in body
+    content can make imported pages show up as Untitled or with an unexpected
+    title, so downgrade later H1 lines while leaving code fences untouched.
+    """
+
+    lines = markdown.splitlines(keepends=True)
+    in_fence = False
+    fence_marker = ""
+    seen_h1 = False
+    prepared: list[str] = []
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith(("```", "~~~")):
+            marker = stripped[:3]
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+            elif marker == fence_marker:
+                in_fence = False
+                fence_marker = ""
+
+        if not in_fence and line.startswith("# "):
+            if seen_h1:
+                prepared.append("### " + line[2:])
+            else:
+                prepared.append(line)
+                seen_h1 = True
+            continue
+        prepared.append(line)
+    return "".join(prepared)
+
 
 class WorkMemoryToolkit:
     """Tool-level API for MCP hosts.
@@ -210,7 +244,7 @@ class WorkMemoryToolkit:
                         project,
                         WIKI_PAGE_TITLES.get(page_key, page_key),
                     ],
-                    "markdown": pages[page_key],
+                    "markdown": prepare_feishu_markdown(pages[page_key]),
                     "current_uri": page_rows.get(page_key, ""),
                     "has_external_url": page_rows.get(page_key, "").startswith(
                         ("http://", "https://")

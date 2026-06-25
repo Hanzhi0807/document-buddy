@@ -66,6 +66,17 @@
 5. 调用 `upsert_wiki_page`，用 `external_url` 把本地页面索引映射到对应飞书页面链接。
 6. 用户提问时，`query_project_wiki` 返回的引用优先指向飞书页面。
 
+如果本机已经装好并授权 `lark-cli`，可以用仓库里的轻量脚本把第 3-5 步固定下来：
+
+```bash
+python scripts/sync_to_feishu.py \
+  --workspace-id "你的团队或工作区标识" \
+  --project "A客户项目" \
+  --root-node-token "已有的文档搭子知识库节点 token"
+```
+
+脚本只调用本机 `lark-cli`，不保存飞书 token，也不引入服务端。它会在写入飞书前把正文里多余的一级标题降级，避免 Docx 导入后页面标题变成 `Untitled`。
+
 ## 页面映射
 
 | 文档搭子页面 | 飞书可见页面 |
