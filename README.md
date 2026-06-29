@@ -68,13 +68,26 @@
 
 ## 真实飞书环境怎么用
 
-你可以把下面这一整段直接复制给支持 MCP 或命令行操作的 agent，例如 Claude Code、Kimi、Codex 等，让它按你的真实飞书环境完成接入：
+你可以把下面这整段直接复制给支持 MCP 或命令行操作的 agent，例如 Claude Code、Kimi、Codex 等，让它按你的真实飞书环境完成接入。里面已经给了示例值，你只需要让 agent 按你的实际飞书空间替换。
 
 ```text
-请帮我在当前机器上使用 Document Buddy（文档搭子）接入真实飞书环境。仓库地址是 https://github.com/Hanzhi0807/document-buddy，请先检查本机是否已经有这个仓库；如果没有，就 clone 到合适的工作目录，然后进入项目目录并执行 pip install -e . 完成安装。请把它作为 MCP server 配到我的 AI 客户端里，启动命令是 python -m work_memory.mcp_server，环境变量 WORK_MEMORY_DATA_DIR 设置为一个本地数据目录，例如 /path/to/document-buddy-data。接着请使用我已经授权的飞书官方 MCP、lark-cli 或企业内部飞书工具读取真实飞书资料，把每份资料的标题、正文和来源链接传给 Document Buddy 的 ingest_text，参数包括 workspace_id、project、title、content、source_url。资料整理完成后，请调用 get_feishu_wiki_sync_plan 生成同步计划；如果本机 lark-cli 已经授权，请运行 python scripts/sync_to_feishu.py --workspace-id "your-team-or-tenant" --project "项目名称" --root-node-token "已有的文档搭子知识库节点 token"，把生成的 wiki 页面写回飞书知识库，并把飞书页面 URL 回填成本地 citation 链接。之后回答任何项目问题前，都必须先调用 query_project_wiki 或 get_cited_context，只能根据返回的 citations 作答；如果没有 citations，就明确说 wiki 没有证据，不要补编。遇到预算、时间、承诺事项等冲突时，请记录到待确认问题或 review item，不要替我猜。整个过程中不要保存飞书 token，不要托管 LLM API key，不要启动公网 webhook 或 SaaS 服务。
+请帮我在当前机器上使用 Document Buddy（文档搭子）接入真实飞书环境。
+
+仓库地址是 https://github.com/Hanzhi0807/document-buddy。请先检查本机是否已经有这个仓库；如果没有，就 clone 到合适的工作目录。然后进入项目目录，执行 pip install -e . 完成安装。
+
+请把它作为 MCP server 配到我的 AI 客户端里。启动命令是 python -m work_memory.mcp_server。环境变量 WORK_MEMORY_DATA_DIR 设置为一个本地数据目录，例如 D:\document-buddy-data 或 /path/to/document-buddy-data。
+
+请使用我已经授权的飞书官方 MCP、lark-cli 或企业内部飞书工具读取真实飞书资料。把每份资料的标题、正文和来源链接传给 Document Buddy 的 ingest_text。参数示例：workspace_id = "acme-feishu"（可以理解为团队/租户/工作区代号），project = "A客户项目"（一个具体项目名），title = "飞书会议纪要：A客户项目会前同步"，content = "飞书工具读取到的正文"，source_url = "https://example.feishu.cn/docx/xxx"。
+
+资料整理完成后，请调用 get_feishu_wiki_sync_plan 生成同步计划。如果本机 lark-cli 已经授权，请运行同步脚本，把生成的 wiki 页面写回飞书知识库，并把飞书页面 URL 回填成本地 citation 链接。命令示例：python scripts/sync_to_feishu.py --workspace-id "acme-feishu" --project "A客户项目" --root-node-token "wikcnExampleRoot123"。其中 root-node-token 是已有的文档搭子知识库根节点 token，例如飞书知识库页面 URL 是 https://example.feishu.cn/wiki/wikcnExampleRoot123，那么 root-node-token 就是 wikcnExampleRoot123。
+
+之后回答任何项目问题前，都必须先调用 query_project_wiki 或 get_cited_context，只能根据返回的 citations 作答。如果没有 citations，就明确说 wiki 没有证据，不要补编。遇到预算、时间、承诺事项等冲突时，请记录到待确认问题或 review item，不要替我猜。
+
+整个过程中不要保存飞书 token，不要托管 LLM API key，不要启动公网 webhook 或 SaaS 服务。
 ```
 
-把其中的 `workspace_id`、`project`、`root-node-token` 和本地路径替换成你自己的环境即可。agent 会负责读取飞书资料、调用文档搭子工具、同步 wiki，并在之后按 citations 回答问题。
+常见字段可以这样理解：`workspace_id` 是你的团队/租户/工作区代号，例如 `acme-feishu`；`project` 是具体项目名，例如 `A客户项目`；`root-node-token` 是飞书知识库根页面 URL 里 `/wiki/` 后面的 token，例如 `wikcnExampleRoot123`。
+
 ## 防幻觉规则
 
 这是硬规则：**回答必须来自项目 wiki。**

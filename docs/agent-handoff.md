@@ -425,3 +425,21 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 下一位 agent 应该继续：
 
 - 如果继续调整 README，保持“复制给 agent 即可执行”的表达，不要重新变成零散操作手册。
+
+### 2026-06-29：README Agent 提示词补示例并分段
+
+本轮目标：
+
+- 按用户反馈，让 README 的可复制 agent 提示词不再是一整行长文本。
+- 给 `workspace_id`、`project`、`root-node-token` 补具体例子，降低新读者理解成本。
+
+本轮改动：
+
+- README 中文版把真实飞书接入 prompt 拆成安装、MCP 配置、飞书读取、同步和回答规则几段。
+- README 中文版补字段解释：`workspace_id = acme-feishu`、`project = A客户项目`、`root-node-token = wikcnExampleRoot123`。
+- README 英文版同步补分段 prompt 和字段示例。
+- CHANGELOG 记录这次可读性调整。
+
+下一位 agent 应该继续：
+
+- 继续保持 README 的“复制给 agent 即可执行”形态，但避免把主要提示词压成单行长文本。

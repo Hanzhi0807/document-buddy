@@ -42,13 +42,26 @@ In the background, Document Buddy:
 
 ## Real Feishu/Lark Usage
 
-Copy the paragraph below into an MCP-capable or command-line-capable agent, such as Claude Code, Kimi, or Codex, and let it wire Document Buddy into your real Feishu/Lark environment:
+Copy the full block below into an MCP-capable or command-line-capable agent, such as Claude Code, Kimi, or Codex, and let it wire Document Buddy into your real Feishu/Lark environment. The block includes example values; ask the agent to replace them with your own workspace details.
 
 ```text
-Help me use Document Buddy with my real Feishu/Lark workspace on this machine. The repository is https://github.com/Hanzhi0807/document-buddy. First check whether the repo already exists locally; if it does not, clone it into a suitable workspace, enter the project directory, and run pip install -e . to install it. Configure it as an MCP server in my AI client with the command python -m work_memory.mcp_server, and set WORK_MEMORY_DATA_DIR to a local data directory such as /path/to/document-buddy-data. Then use my already-authorized official Feishu MCP, lark-cli, or internal Feishu tooling to read real Feishu materials. For each source, pass its title, body text, and source URL to Document Buddy's ingest_text tool with workspace_id, project, title, content, and source_url. After ingestion, call get_feishu_wiki_sync_plan to generate the sync plan. If local lark-cli is authorized, run python scripts/sync_to_feishu.py --workspace-id "your-team-or-tenant" --project "Project Name" --root-node-token "existing Document Buddy root wiki node token" to write the generated wiki pages back to Feishu Wiki and backfill Feishu page URLs as local citation links. Before answering any project question, always call query_project_wiki or get_cited_context, and answer only from returned citations. If there are no citations, say the wiki has no evidence instead of inventing an answer. If budgets, dates, commitments, or other facts conflict, record them as open questions or review items instead of guessing. Do not store Feishu tokens, do not host LLM API keys, and do not start a public webhook or SaaS service.
+Help me use Document Buddy with my real Feishu/Lark workspace on this machine.
+
+The repository is https://github.com/Hanzhi0807/document-buddy. First check whether the repo already exists locally. If it does not, clone it into a suitable workspace. Then enter the project directory and run pip install -e . to install it.
+
+Configure it as an MCP server in my AI client. The startup command is python -m work_memory.mcp_server. Set WORK_MEMORY_DATA_DIR to a local data directory, for example D:\document-buddy-data or /path/to/document-buddy-data.
+
+Use my already-authorized official Feishu MCP, lark-cli, or internal Feishu tooling to read real Feishu materials. For each source, pass its title, body text, and source URL to Document Buddy's ingest_text tool. Example parameters: workspace_id = "acme-feishu" (a team/tenant/workspace identifier), project = "Customer A Project" (one concrete project name), title = "Feishu meeting note: Customer A prep", content = "text read from Feishu", source_url = "https://example.feishu.cn/docx/xxx".
+
+After ingestion, call get_feishu_wiki_sync_plan to generate the sync plan. If local lark-cli is authorized, run the sync script to write the generated wiki pages back to Feishu Wiki and backfill Feishu page URLs as local citation links. Example command: python scripts/sync_to_feishu.py --workspace-id "acme-feishu" --project "Customer A Project" --root-node-token "wikcnExampleRoot123". Here root-node-token means the token of an existing Document Buddy root wiki page. For example, if the Feishu Wiki page URL is https://example.feishu.cn/wiki/wikcnExampleRoot123, then root-node-token is wikcnExampleRoot123.
+
+Before answering any project question, always call query_project_wiki or get_cited_context, and answer only from returned citations. If there are no citations, say the wiki has no evidence instead of inventing an answer. If budgets, dates, commitments, or other facts conflict, record them as open questions or review items instead of guessing.
+
+Do not store Feishu tokens, do not host LLM API keys, and do not start a public webhook or SaaS service.
 ```
 
-Replace `workspace_id`, `project`, `root-node-token`, and local paths with your own environment values. The agent should read Feishu materials, call Document Buddy tools, sync the wiki, and answer future questions only from citations.
+Field examples: `workspace_id` is a team/tenant/workspace identifier such as `acme-feishu`; `project` is a concrete project name such as `Customer A Project`; `root-node-token` is the token after `/wiki/` in the Feishu Wiki root page URL, such as `wikcnExampleRoot123`.
+
 ## Anti-Hallucination Rule
 
 Hard rule: **answers must come from the project wiki.**
