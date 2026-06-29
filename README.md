@@ -68,93 +68,13 @@
 
 ## 真实飞书环境怎么用
 
-### 1. 安装
-
-```bash
-git clone https://github.com/Hanzhi0807/document-buddy.git
-cd document-buddy
-pip install -e .
-```
-
-### 2. 在 AI 客户端里启动 MCP
-
-把文档搭子加到支持 MCP 的 AI 客户端里，例如：
-
-```json
-{
-  "mcpServers": {
-    "文档搭子": {
-      "command": "python",
-      "args": ["-m", "work_memory.mcp_server"],
-      "env": {
-        "WORK_MEMORY_DATA_DIR": "/path/to/document-buddy-data"
-      }
-    }
-  }
-}
-```
-
-安装后也可以用：
-
-```bash
-document-buddy-mcp
-```
-
-### 3. 读取飞书资料并写入项目记忆
-
-用飞书官方 MCP、`lark-cli` 或你的企业内部飞书工具读取真实飞书内容。然后让 AI 客户端调用文档搭子的 `ingest_text`：
-
-```json
-{
-  "workspace_id": "your-team-or-tenant",
-  "project": "A客户项目",
-  "title": "飞书会议纪要标题",
-  "content": "飞书工具读取到的正文",
-  "source_url": "飞书文档或消息链接"
-}
-```
-
-文档搭子会生成标准项目 wiki：
+你可以把下面这一整段直接复制给支持 MCP 或命令行操作的 agent，例如 Claude Code、Kimi、Codex 等，让它按你的真实飞书环境完成接入：
 
 ```text
-文档搭子知识库/
-  A客户项目/
-    项目首页
-    项目总览
-    需求与关注点
-    风险点
-    承诺与待办
-    决策记录
-    相关人物
-    待确认问题
-    资料清单
-    维护日志
+请帮我在当前机器上使用 Document Buddy（文档搭子）接入真实飞书环境。仓库地址是 https://github.com/Hanzhi0807/document-buddy，请先检查本机是否已经有这个仓库；如果没有，就 clone 到合适的工作目录，然后进入项目目录并执行 pip install -e . 完成安装。请把它作为 MCP server 配到我的 AI 客户端里，启动命令是 python -m work_memory.mcp_server，环境变量 WORK_MEMORY_DATA_DIR 设置为一个本地数据目录，例如 /path/to/document-buddy-data。接着请使用我已经授权的飞书官方 MCP、lark-cli 或企业内部飞书工具读取真实飞书资料，把每份资料的标题、正文和来源链接传给 Document Buddy 的 ingest_text，参数包括 workspace_id、project、title、content、source_url。资料整理完成后，请调用 get_feishu_wiki_sync_plan 生成同步计划；如果本机 lark-cli 已经授权，请运行 python scripts/sync_to_feishu.py --workspace-id "your-team-or-tenant" --project "项目名称" --root-node-token "已有的文档搭子知识库节点 token"，把生成的 wiki 页面写回飞书知识库，并把飞书页面 URL 回填成本地 citation 链接。之后回答任何项目问题前，都必须先调用 query_project_wiki 或 get_cited_context，只能根据返回的 citations 作答；如果没有 citations，就明确说 wiki 没有证据，不要补编。遇到预算、时间、承诺事项等冲突时，请记录到待确认问题或 review item，不要替我猜。整个过程中不要保存飞书 token，不要托管 LLM API key，不要启动公网 webhook 或 SaaS 服务。
 ```
 
-### 4. 同步到飞书知识库
-
-如果你已经装好并授权 `lark-cli`，可以用同步脚本把 wiki 页面写入飞书知识库，并把飞书页面 URL 回填成本地 citation 链接：
-
-```bash
-python scripts/sync_to_feishu.py \
-  --workspace-id "your-team-or-tenant" \
-  --project "A客户项目" \
-  --root-node-token "已有的文档搭子知识库节点 token"
-```
-
-这个脚本只调用你本机已经登录的 `lark-cli`，不保存飞书 token，也不需要服务端。写入飞书前，它会自动处理 Markdown 里多余的一级标题，避免页面标题变成 `Untitled`。
-
-### 5. 提问并获得带引用回答
-
-问题进来时，AI 客户端应该先调用：
-
-- `query_project_wiki`
-- 或 `get_cited_context`
-
-文档搭子只返回 wiki 中可引用的证据。AI 客户端再基于这些证据回答。
-
-如果资料里没有证据，答案应该是：wiki 没有证据，而不是自由发挥。
-
+把其中的 `workspace_id`、`project`、`root-node-token` 和本地路径替换成你自己的环境即可。agent 会负责读取飞书资料、调用文档搭子工具、同步 wiki，并在之后按 citations 回答问题。
 ## 防幻觉规则
 
 这是硬规则：**回答必须来自项目 wiki。**

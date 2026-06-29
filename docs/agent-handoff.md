@@ -409,3 +409,19 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 
 - 如果继续改公开仓库展示，优先保持无 CI、无服务端、无 token 托管这三个边界。
 - 改 README 或仓库元数据后，确认不要重新引入 GitHub Actions workflow 或 CI badge。
+### 2026-06-29：README 使用说明改成可复制 Agent 提示词
+
+本轮目标：
+
+- 按用户要求，把 README 里“真实飞书环境怎么用”改成一段可直接复制给 agent 的语句。
+- 明确告诉读者可以把这段话复制给 Claude Code、Kimi、Codex 等 agent 使用。
+
+本轮改动：
+
+- README 中文版将原来的安装、MCP 配置、ingest、sync、问答步骤收拢成一个可复制 prompt。
+- README 英文版同步改成 copy-paste agent prompt。
+- CHANGELOG 记录这次使用说明调整。
+
+下一位 agent 应该继续：
+
+- 如果继续调整 README，保持“复制给 agent 即可执行”的表达，不要重新变成零散操作手册。

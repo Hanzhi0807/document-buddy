@@ -42,91 +42,13 @@ In the background, Document Buddy:
 
 ## Real Feishu/Lark Usage
 
-### 1. Install
-
-```bash
-git clone https://github.com/Hanzhi0807/document-buddy.git
-cd document-buddy
-pip install -e .
-```
-
-### 2. Start The MCP Server In Your AI Client
-
-Add Document Buddy to an MCP-capable AI client:
-
-```json
-{
-  "mcpServers": {
-    "Document Buddy": {
-      "command": "python",
-      "args": ["-m", "work_memory.mcp_server"],
-      "env": {
-        "WORK_MEMORY_DATA_DIR": "/path/to/document-buddy-data"
-      }
-    }
-  }
-}
-```
-
-After installation you can also start it with:
-
-```bash
-document-buddy-mcp
-```
-
-### 3. Ingest Real Feishu Materials
-
-Use the official Feishu MCP, `lark-cli`, or your internal Feishu tooling to read real Feishu content. Then let the AI client call `ingest_text`:
-
-```json
-{
-  "workspace_id": "your-team-or-tenant",
-  "project": "Customer A Project",
-  "title": "Feishu meeting note title",
-  "content": "text read from Feishu",
-  "source_url": "Feishu doc or message URL"
-}
-```
-
-Document Buddy creates a standard project wiki:
+Copy the paragraph below into an MCP-capable or command-line-capable agent, such as Claude Code, Kimi, or Codex, and let it wire Document Buddy into your real Feishu/Lark environment:
 
 ```text
-Document Buddy Wiki/
-  Customer A Project/
-    Home
-    Overview
-    Requirements
-    Risks
-    Commitments
-    Decisions
-    People
-    Open Questions
-    Sources
-    Maintenance Log
+Help me use Document Buddy with my real Feishu/Lark workspace on this machine. The repository is https://github.com/Hanzhi0807/document-buddy. First check whether the repo already exists locally; if it does not, clone it into a suitable workspace, enter the project directory, and run pip install -e . to install it. Configure it as an MCP server in my AI client with the command python -m work_memory.mcp_server, and set WORK_MEMORY_DATA_DIR to a local data directory such as /path/to/document-buddy-data. Then use my already-authorized official Feishu MCP, lark-cli, or internal Feishu tooling to read real Feishu materials. For each source, pass its title, body text, and source URL to Document Buddy's ingest_text tool with workspace_id, project, title, content, and source_url. After ingestion, call get_feishu_wiki_sync_plan to generate the sync plan. If local lark-cli is authorized, run python scripts/sync_to_feishu.py --workspace-id "your-team-or-tenant" --project "Project Name" --root-node-token "existing Document Buddy root wiki node token" to write the generated wiki pages back to Feishu Wiki and backfill Feishu page URLs as local citation links. Before answering any project question, always call query_project_wiki or get_cited_context, and answer only from returned citations. If there are no citations, say the wiki has no evidence instead of inventing an answer. If budgets, dates, commitments, or other facts conflict, record them as open questions or review items instead of guessing. Do not store Feishu tokens, do not host LLM API keys, and do not start a public webhook or SaaS service.
 ```
 
-### 4. Sync To Feishu Wiki
-
-If `lark-cli` is installed and authorized, sync the generated wiki pages back to Feishu:
-
-```bash
-python scripts/sync_to_feishu.py \
-  --workspace-id "your-team-or-tenant" \
-  --project "Customer A Project" \
-  --root-node-token "existing Document Buddy root wiki node token"
-```
-
-The script calls your local `lark-cli`; it does not store Feishu tokens or require a backend server. Before writing Markdown to Feishu, it keeps a single H1 title so imported Docx pages do not become `Untitled`.
-
-### 5. Ask Questions With Citations
-
-Before answering a project question, the AI client should call:
-
-- `query_project_wiki`
-- or `get_cited_context`
-
-Document Buddy returns only cited wiki evidence. If there are no citations, the AI client should say the wiki has no evidence instead of inventing an answer.
-
+Replace `workspace_id`, `project`, `root-node-token`, and local paths with your own environment values. The agent should read Feishu materials, call Document Buddy tools, sync the wiki, and answer future questions only from citations.
 ## Anti-Hallucination Rule
 
 Hard rule: **answers must come from the project wiki.**

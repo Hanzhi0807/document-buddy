@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replaced the Feishu usage walkthrough with copy-paste agent prompts for Claude Code, Kimi, Codex, and similar tools.
 - Removed the GitHub Actions workflow and CI badge for a lightweight public repository setup.
 - Updated repository entrypoints for the public `Hanzhi0807/document-buddy` GitHub repository.
 - Split English README into `README.en.md` and added top navigation for Chinese README, English README, and MIT License.
