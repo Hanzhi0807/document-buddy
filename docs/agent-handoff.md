@@ -12,7 +12,7 @@
 
 - 中文名：文档搭子。
 - 英文名：Document Buddy。
-- GitHub repo：`ivyzhi0807/document-buddy`。
+- GitHub repo：`Hanzhi0807/document-buddy`。
 - 形态：无服务端 MCP 工具包。
 - 不是：飞书机器人 SaaS、本地 Web UI、公网 webhook 服务、LLM API 托管服务。
 - LLM 来源：用户自己的 AI 客户端或企业模型配置。
@@ -389,3 +389,23 @@ python -c "import work_memory; from importlib.metadata import version; print(wor
 说明：
 
 - GitHub 原生的 README / license 区域不能由仓库文件直接改名或增加自定义 tab；当前实现是最接近且最通用的开源项目做法。
+### 2026-06-29：公开仓库元数据与 CI 移除
+
+本轮目标：
+
+- 按用户要求把项目推到 `Hanzhi0807/document-buddy` 并保持公开可搜索。
+- 补 GitHub About 描述和 topics，让仓库更容易被搜索到。
+- 移除 GitHub CI，不在公开仓库启用 GitHub Actions workflow。
+
+本轮改动：
+
+- 删除 `.github/workflows/ci.yml`，公开仓库不再带 GitHub Actions CI。
+- README 中文版和英文版移除 CI badge。
+- README 安装示例里的 clone URL 改为 `https://github.com/Hanzhi0807/document-buddy.git`。
+- CHANGELOG 记录 CI 移除和公开仓库入口更新。
+- GitHub About 已写入 description、homepage 和 topics。
+
+下一位 agent 应该继续：
+
+- 如果继续改公开仓库展示，优先保持无 CI、无服务端、无 token 托管这三个边界。
+- 改 README 或仓库元数据后，确认不要重新引入 GitHub Actions workflow 或 CI badge。

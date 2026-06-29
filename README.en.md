@@ -1,7 +1,6 @@
 # Document Buddy（文档搭子）
 
 <p>
-  <a href="https://github.com/ivyzhi0807/document-buddy/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ivyzhi0807/document-buddy/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="MCP" src="https://img.shields.io/badge/MCP-toolkit-4b5563.svg">
   <img alt="Feishu / Lark" src="https://img.shields.io/badge/Feishu%20%2F%20Lark-ready-00b96b.svg">
@@ -46,7 +45,7 @@ In the background, Document Buddy:
 ### 1. Install
 
 ```bash
-git clone https://github.com/ivyzhi0807/document-buddy.git
+git clone https://github.com/Hanzhi0807/document-buddy.git
 cd document-buddy
 pip install -e .
 ```

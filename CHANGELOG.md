@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed the GitHub Actions workflow and CI badge for a lightweight public repository setup.
+- Updated repository entrypoints for the public `Hanzhi0807/document-buddy` GitHub repository.
 - Split English README into `README.en.md` and added top navigation for Chinese README, English README, and MIT License.
 - Reworked README into bilingual Chinese-first and English sections focused on real Feishu usage.
 - Added package keywords for MCP, Feishu/Lark, llm-wiki, cited answers, and anti-hallucination discoverability.
